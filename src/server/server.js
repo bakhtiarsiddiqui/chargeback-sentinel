@@ -1,12 +1,17 @@
 import express from "express";
-import disputes from "./data/disputes.json" with { type: "json" };
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import disputes from "../../data/disputes.json" with { type: "json" };
 import {
   draftResponse,
   evaluateDisputes,
   normalizeDispute,
   scoreDispute,
   verifyEvidence
-} from "./lib/engine.js";
+} from "../engine/engine.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,12 +22,13 @@ const heldOutDisputes = normalizedDisputes.slice(-3);
 const queueDisputes = normalizedDisputes.slice(0, 3);
 
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "../public")));
 
 app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
-    service: "ai-chargeback-risk-manager",
+    service: "chargeback-sentinel-api",
+    version: "1.0.0",
     date: new Date().toISOString()
   });
 });
@@ -95,7 +101,7 @@ app.get("/api/disputes/:id", (req, res) => {
 });
 
 const server = app.listen(port, host, () => {
-  console.log(`AI Chargeback Risk Manager listening on http://${host}:${port}`);
+  console.log(`Chargeback Sentinel API listening on http://${host}:${port}`);
 });
 
 server.on("error", (error) => {

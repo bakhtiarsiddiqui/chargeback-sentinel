@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import disputes from "../data/disputes.json" with { type: "json" };
-import { draftResponse, evaluateDisputes, scoreDispute, verifyEvidence } from "../lib/engine.js";
+import disputes from "../../data/disputes.json" with { type: "json" };
+import { draftResponse, evaluateDisputes, scoreDispute, verifyEvidence } from "../../src/engine/engine.js";
 
 test("ready_to_submit is assigned to strong evidence disputes", () => {
   const result = scoreDispute(disputes[0]);

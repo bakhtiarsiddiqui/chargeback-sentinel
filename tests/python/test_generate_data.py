@@ -4,7 +4,7 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from generate_data import FIELDNAMES, generate_dataset, write_csv
+from src.ml.generate_data import FIELDNAMES, generate_dataset, write_csv
 
 
 class GenerateDataTests(unittest.TestCase):

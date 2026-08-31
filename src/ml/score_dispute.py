@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-#Train an explainable logistic-regression win-probability scorer.
+"""
+Chargeback Sentinel - Model Trainer & Scorer
+--------------------------------------------
+Trains an explainable Logistic Regression model for dispute win-probability scoring.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +16,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from ml_features import FEATURE_NAMES, LABEL_ORDER, load_csv, matrix_and_labels
+try:
+    from .features import FEATURE_NAMES, LABEL_ORDER, load_csv, matrix_and_labels
+except ImportError:
+    from features import FEATURE_NAMES, LABEL_ORDER, load_csv, matrix_and_labels
 
 
 DEFAULT_TRAIN_PATH = Path("data/ml/train.csv")
@@ -92,7 +99,10 @@ def print_coefficients(model: Pipeline) -> None:
 
 
 def predict_win_probability(model: Pipeline, record: dict) -> float:
-    from ml_features import record_to_features
+    try:
+        from .features import record_to_features
+    except ImportError:
+        from features import record_to_features
 
     probabilities = model.predict_proba([record_to_features(record)])[0]
     class_index = list(model.named_steps["classifier"].classes_).index("won")
@@ -121,4 +131,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""
+Chargeback Sentinel - Synthetic Data Generator
+----------------------------------------------
+Generates stratified synthetic dataset for chargeback dispute outcome prediction with injected noise and edge cases.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +14,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence
-
 
 TOTAL_RECORDS = 1200
 DEFAULT_SEED = 20260829
@@ -71,10 +75,8 @@ def weighted_country(rng: random.Random) -> str:
         return "US"
     return "GB"
 
-    #Applying the requested noisy labeling logic.
 
 def synthetic_label(record: Dict[str, object], rng: random.Random) -> str:
-    
     if record["refund_issued"]:
         return "not_contested"
 
@@ -138,10 +140,8 @@ def generate_base_record(index: int, rng: random.Random) -> Dict[str, object]:
         "is_edge_case": False,
     }
 
-    #Return explicit edge cases.
-def edge_case_templates() -> List[Dict[str, object]]:
-    
 
+def edge_case_templates() -> List[Dict[str, object]]:
     base_time = datetime(2026, 7, 1, 10, 0, 0)
     templates: List[Dict[str, object]] = []
 
@@ -169,7 +169,6 @@ def edge_case_templates() -> List[Dict[str, object]]:
         record.update(overrides)
         templates.append(record)
 
-    # Contradictory AVS/CVV signals.
     add_template(0, cvv_match=True, avs_match=False, three_ds_authenticated=True)
     add_template(1, cvv_match=False, avs_match=True, three_ds_authenticated=True)
     add_template(2, cvv_match=False, avs_match=True, device_id_match=False, cardholder_ip_country="SG")
@@ -177,7 +176,6 @@ def edge_case_templates() -> List[Dict[str, object]]:
     add_template(4, cvv_match=False, avs_match=False, three_ds_authenticated=True, txn_amount=14850)
     add_template(5, cvv_match=True, avs_match=False, customer_disputed_before_count=4)
 
-    # Serial disputers with strong auth.
     add_template(6, customer_disputed_before_count=5, three_ds_authenticated=True, avs_match=True, cvv_match=True)
     add_template(7, customer_disputed_before_count=4, previous_txns_from_device=8, customer_txn_history_count=12)
     add_template(8, customer_disputed_before_count=3, txn_amount=11200, three_ds_authenticated=True)
@@ -185,7 +183,6 @@ def edge_case_templates() -> List[Dict[str, object]]:
     add_template(10, customer_disputed_before_count=4, refund_issued=True)
     add_template(11, customer_disputed_before_count=3, device_id_match=False, cardholder_ip_country="US")
 
-    # High-ticket ambiguous signals.
     add_template(12, txn_amount=14999, three_ds_authenticated=False, avs_match=True, cvv_match=True)
     add_template(13, txn_amount=14350, three_ds_authenticated=False, device_id_match=False, previous_txns_from_device=0)
     add_template(14, txn_amount=13800, cardholder_ip_country="GB", billing_country="IN")
@@ -193,7 +190,6 @@ def edge_case_templates() -> List[Dict[str, object]]:
     add_template(16, txn_amount=13250, is_first_time_customer=True, customer_txn_history_count=0)
     add_template(17, txn_amount=14075, previous_txns_from_device=10, three_ds_authenticated=False)
 
-    # Missing 3DS entirely or weak authentication patterns.
     add_template(18, three_ds_authenticated=False, avs_match=True, cvv_match=True, txn_amount=9800)
     add_template(19, three_ds_authenticated=False, avs_match=False, cvv_match=True, device_id_match=True)
     add_template(20, three_ds_authenticated=False, avs_match=True, cvv_match=False, device_id_match=False)
@@ -203,10 +199,8 @@ def edge_case_templates() -> List[Dict[str, object]]:
 
     return templates
 
-    #Nudging the label distribution toward the requested rough target.
 
 def enforce_targets(records: List[Dict[str, object]], rng: random.Random) -> None:
-    
     targets = LabelTargets(
         won=round(len(records) * 0.30),
         lost=round(len(records) * 0.55),

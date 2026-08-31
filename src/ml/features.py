@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """
-Shared feature preparation for the synthetic chargeback scorer.
-
-The dataset is synthetic, rule-derived, and intentionally noisy. These helpers
-keep model training and evaluation aligned without implying real-world chargeback
-outcome validity.
+Chargeback Sentinel - Feature Engineering Pipeline
+--------------------------------------------------
+Shared feature transformation and data coercion utilities for training and inference.
 """
 
 from __future__ import annotations
@@ -13,7 +11,10 @@ import csv
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
 
-from verify_evidence import verify_evidence
+try:
+    from .verify_evidence import verify_evidence
+except ImportError:
+    from verify_evidence import verify_evidence
 
 
 BOOL_FIELDS = [
@@ -25,18 +26,21 @@ BOOL_FIELDS = [
     "three_ds_authenticated",
     "refund_issued",
 ]
+
 NUMERIC_FIELDS = [
     "txn_amount",
     "previous_txns_from_device",
     "customer_txn_history_count",
     "customer_disputed_before_count",
 ]
+
 FEATURE_NAMES = [
     *NUMERIC_FIELDS,
     *BOOL_FIELDS,
     "ip_country_matches_billing_country",
     "completeness_score",
 ]
+
 LABEL_ORDER = ["lost", "not_contested", "won"]
 
 
@@ -83,4 +87,3 @@ def matrix_and_labels(records: Sequence[Dict[str, object]]) -> Tuple[List[List[f
 
 def edge_case_mask(records: Iterable[Dict[str, object]]) -> List[bool]:
     return [parse_bool(record.get("is_edge_case", False)) for record in records]
-

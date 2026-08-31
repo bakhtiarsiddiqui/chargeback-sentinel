@@ -4,10 +4,10 @@ from pathlib import Path
 
 import joblib
 
-from evaluate import false_positive_cost
-from generate_data import generate_dataset, write_csv
-from ml_features import FEATURE_NAMES, record_to_features
-from score_dispute import predict_win_probability, train_model
+from src.ml.evaluate import false_positive_cost
+from src.ml.features import FEATURE_NAMES, record_to_features
+from src.ml.generate_data import generate_dataset, write_csv
+from src.ml.score_dispute import predict_win_probability, train_model
 
 
 class ScoreEvaluateTests(unittest.TestCase):

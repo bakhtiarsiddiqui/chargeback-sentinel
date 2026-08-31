@@ -1,11 +1,30 @@
 {
-  "name": "ai-chargeback-risk-manager",
+  "name": "chargeback-sentinel",
   "version": "1.0.0",
-  "description": "Defense-only chargeback evidence verifier and auto-responder demo",
+  "description": "Enterprise-grade AI Chargeback Risk & Evidence Verification Engine",
   "type": "module",
+  "main": "src/server/server.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bakhtiarsiddiqui/chargeback-sentinel.git"
+  },
+  "keywords": [
+    "chargeback",
+    "fraud-prevention",
+    "dispute-management",
+    "machine-learning",
+    "risk-scoring",
+    "fintech"
+  ],
+  "author": "Bakhtiar Siddiqui",
+  "license": "MIT",
   "scripts": {
-    "start": "node server.js",
-    "test": "node --test"
+    "start": "node src/server/server.js",
+    "test": "node --test tests/js/engine.test.js",
+    "test:python": "PYTHONPATH=. python3 -m unittest discover -s tests/python",
+    "data:generate": "python3 src/ml/generate_data.py",
+    "ml:train": "PYTHONPATH=src/ml python3 src/ml/score_dispute.py",
+    "ml:evaluate": "PYTHONPATH=src/ml python3 src/ml/evaluate.py"
   },
   "dependencies": {
     "express": "^5.1.0"

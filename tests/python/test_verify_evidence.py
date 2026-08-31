@@ -1,6 +1,6 @@
 import unittest
 
-from verify_evidence import verify_evidence
+from src.ml.verify_evidence import verify_evidence
 
 
 class VerifyEvidenceTests(unittest.TestCase):

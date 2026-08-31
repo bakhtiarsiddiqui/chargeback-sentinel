@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
+"""
+Chargeback Sentinel - Deterministic Evidence Verifier
+------------------------------------------------------
+Validates dispute evidence completeness based on risk signals and 3DS authentication protocols.
+"""
 
 from __future__ import annotations
-
 from typing import Callable, Dict, List, Tuple
 
-
 Rule = Tuple[str, Callable[[dict], bool]]
-
 
 EVIDENCE_RULES: List[Rule] = [
     ("3DS authentication proof", lambda record: bool(record.get("three_ds_authenticated"))),
@@ -36,4 +38,3 @@ def verify_evidence(record: dict) -> dict:
         "missing_items": missing_items,
         "present_items": present_items,
     }
-

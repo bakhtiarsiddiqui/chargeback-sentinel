@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """
-Evaluate the synthetic chargeback scorer on the held-out test split.
-
-These metrics are for a small synthetic, rule-derived dataset with injected
-noise. Treat suspiciously perfect results as a data-generation warning, not as a
-claim of real-world chargeback performance.
+Chargeback Sentinel - Model Evaluator
+------------------------------------
+Evaluates model precision, recall, weighted F1 score, confusion matrix, and cost-benefit metrics.
 """
 
 from __future__ import annotations
@@ -16,7 +14,10 @@ from typing import List, Sequence
 import joblib
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
 
-from ml_features import LABEL_ORDER, edge_case_mask, load_csv, matrix_and_labels
+try:
+    from .features import LABEL_ORDER, edge_case_mask, load_csv, matrix_and_labels
+except ImportError:
+    from features import LABEL_ORDER, edge_case_mask, load_csv, matrix_and_labels
 
 
 DEFAULT_MODEL_PATH = Path("model.pkl")
@@ -121,4 +122,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
