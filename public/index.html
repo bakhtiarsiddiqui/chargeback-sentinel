@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Chargeback Risk Manager</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Track 02 • Defense-Only Analyst Copilot</p>
+          <h1>AI Chargeback Risk Manager</h1>
+          <p class="hero-copy">
+            Predict which disputes are worth contesting, verify missing evidence, and draft
+            merchant-ready responses with measured margin impact.
+          </p>
+        </div>
+        <div class="hero-card">
+          <p class="mini-label">CTO Demo Story</p>
+          <ul>
+            <li>Recover merchant margin</li>
+            <li>Reduce analyst review time</li>
+            <li>Avoid wasting effort on bad contests</li>
+          </ul>
+        </div>
+      </header>
+
+      <section class="metrics-grid" id="metrics-grid"></section>
+
+      <section id="app-status" class="status-banner hidden"></section>
+
+      <section class="content-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="mini-label">Dispute Queue</p>
+              <h2>Priority cases</h2>
+            </div>
+          </div>
+          <div id="queue" class="queue-list"></div>
+        </div>
+
+        <div class="panel detail-panel">
+          <div class="panel-header">
+            <div>
+              <p class="mini-label">Analyst Review</p>
+              <h2 id="detail-title">Select a dispute</h2>
+            </div>
+            <span id="decision-badge" class="decision-badge">Waiting</span>
+          </div>
+
+          <div id="detail-empty" class="empty-state">
+            Pick a dispute from the queue to inspect its risk, missing evidence, and response draft.
+          </div>
+
+          <div id="detail-content" class="detail-content hidden">
+            <div class="detail-topline">
+              <div class="score-card">
+                <p class="mini-label">Win Probability</p>
+                <strong id="win-probability">0%</strong>
+              </div>
+              <div class="score-card">
+                <p class="mini-label">Expected Recovery</p>
+                <strong id="expected-recovery">₹0</strong>
+              </div>
+              <div class="score-card">
+                <p class="mini-label">False-Positive Cost</p>
+                <strong id="contest-cost">₹0</strong>
+              </div>
+            </div>
+
+            <div class="detail-columns">
+              <div>
+                <h3>Reason Codes</h3>
+                <ul id="reason-codes" class="tag-list"></ul>
+                <h3>Missing Evidence</h3>
+                <ul id="missing-items" class="plain-list"></ul>
+                <h3>Risk Flags</h3>
+                <ul id="risk-flags" class="plain-list"></ul>
+              </div>
+              <div>
+                <h3>Draft Response</h3>
+                <div id="draft-text" class="draft-box"></div>
+                <h3>Citations</h3>
+                <ul id="citations" class="plain-list"></ul>
+                <h3>Submission Checklist</h3>
+                <ul id="submission-checklist" class="plain-list"></ul>
+              </div>
+            </div>
+
+            <div class="audit-panel">
+              <h3>Audit Trail</h3>
+              <ul id="audit-trail" class="plain-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+  </html>
