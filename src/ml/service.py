@@ -16,13 +16,12 @@ import joblib
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-# Ensure src/ml directory is in sys.path
-sys.path.insert(0, str(Path(__file__).parent))
+# Ensure src/ml directory is in sys.path for imports
+ml_dir = Path(__file__).parent
+if str(ml_dir) not in sys.path:
+    sys.path.insert(0, str(ml_dir))
 
-try:
-    from features import record_to_features
-except ImportError:
-    from src.ml.features import record_to_features
+from features import record_to_features
 
 app = FastAPI(
     title="Chargeback Sentinel - ML Agent API",
