@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import disputes from "../../data/disputes.json" with { type: "json" };
 import { assessTransactionRisk } from "../../src/engine/transactionRiskAgent.js";
 import { toMlFeatures } from "../../src/engine/mlAdapter.js";
-import { runCasePipeline } from "../../src/engine/orchestrator.js";
+import { runCasePipeline, normalizeDispute } from "../../src/engine/orchestrator.js";
 
 test("TransactionRiskAgent assesses pre-transaction risk flags correctly", () => {
   const highRiskTxn = {
@@ -23,7 +23,8 @@ test("TransactionRiskAgent assesses pre-transaction risk flags correctly", () =>
 
 test("mlAdapter transforms dispute record into valid snake_case ML feature payload", () => {
   const sampleDispute = disputes[0];
-  const features = toMlFeatures({ ...sampleDispute, _evidenceCompletenessScore: 0.95 });
+  const normalizedDispute = normalizeDispute({ ...sampleDispute, _evidenceCompletenessScore: 0.95 });
+  const features = toMlFeatures(normalizedDispute);
 
   assert.equal(features.txn_amount, sampleDispute.amount);
   assert.equal(features.device_id_match, Boolean(sampleDispute.deviceFingerprintMatch));
