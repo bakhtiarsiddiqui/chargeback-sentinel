@@ -28,6 +28,7 @@ export function toMlFeatures(normalizedDispute) {
     refund_issued: Boolean(normalizedDispute.refundInitiated ?? false),
     cardholder_ip_country: cardholderIpCountry,
     billing_country: billingCountry,
-    ip_country_matches_billing_country: cardholderIpCountry === billingCountry
+    ip_country_matches_billing_country: cardholderIpCountry === billingCountry,
+    completeness_score: normalizedDispute._evidenceCompletenessScore ?? 0
   };
 }
