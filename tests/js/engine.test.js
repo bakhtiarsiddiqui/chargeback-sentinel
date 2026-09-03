@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import disputes from "../../data/disputes.json" with { type: "json" };
-import { draftResponse, evaluateDisputes, scoreDispute, verifyEvidence } from "../../src/engine/engine.js";
+import { draftResponse, evaluateDisputes, scoreDispute, verifyEvidence, ResponseNarrativeAgent } from "../../src/engine/engine.js";
 
 test("ready_to_submit is assigned to strong evidence disputes", () => {
   const result = scoreDispute(disputes[0]);
@@ -19,6 +19,17 @@ test("draft response includes actionable recommendation", () => {
   const draft = draftResponse(disputes[1]);
   assert.match(draft.draftText, /Recommended action:/);
   assert.ok(draft.submissionChecklist.length > 0);
+});
+
+test("ResponseNarrativeAgent generates async narrative text and PDF payload with fallback if offline", async () => {
+  const agent = new ResponseNarrativeAgent();
+  const draft = await agent.generateDraft(disputes[0]);
+  assert.match(draft.draftText, /We respectfully contest dispute/);
+  assert.ok(draft.submissionChecklist.length > 0);
+
+  const pdfPayload = await agent._buildEvidencePdf(disputes[0]);
+  assert.equal(pdfPayload.disputeId, disputes[0].id);
+  assert.ok(pdfPayload.coverLetterText.length > 0);
 });
 
 test("held-out evaluation returns bounded metrics", () => {

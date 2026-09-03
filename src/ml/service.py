@@ -24,6 +24,14 @@ if str(ml_dir) not in sys.path:
     sys.path.insert(0, str(ml_dir))
 
 from features import record_to_features
+try:
+    from .score_dispute import StringLabelXGBClassifier  # noqa: F401
+except ImportError:
+    from score_dispute import StringLabelXGBClassifier  # noqa: F401
+
+main_mod = sys.modules.get("__main__")
+if main_mod:
+    setattr(main_mod, "StringLabelXGBClassifier", StringLabelXGBClassifier)
 from evaluation_schema import EvaluationValidationError, build_evaluation
 
 MODEL_PATH = Path("model.pkl")
@@ -107,17 +115,26 @@ def score(features: DisputeFeatures) -> Dict[str, Any]:
     feature_vector = record_to_features(record)
     probabilities = model.predict_proba([feature_vector])[0]
 
-    classes = list(model.named_steps["classifier"].classes_)
+    if hasattr(model, "named_steps") and "classifier" in model.named_steps:
+        classes = list(model.named_steps["classifier"].classes_)
+    elif hasattr(model, "classes_"):
+        classes = list(model.classes_)
+    else:
+        classes = ["lost", "not_contested", "won"]
+
     if "won" not in classes:
         raise HTTPException(status_code=500, detail="Invalid model classes configuration.")
 
     win_index = classes.index("won")
     win_probability = float(probabilities[win_index])
 
+    classifier = model.named_steps["classifier"] if hasattr(model, "named_steps") else model
+    model_name = type(classifier).__name__
+
     return {
         "winProbability": round(win_probability, 4),
         "agent": "DisputeWinProbabilityAgent",
-        "modelType": "LogisticRegression (scikit-learn)",
+        "modelType": f"Calibrated XGBoost ({model_name})" if "Calibrated" in model_name or "XGB" in model_name else "LogisticRegression (scikit-learn)",
         "dataNotice": _bundle.get("synthetic_data_notice", "Trained on synthetic data."),
     }
 

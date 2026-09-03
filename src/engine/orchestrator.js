@@ -5,7 +5,7 @@
  * evidence verification, live ML win-probability inference, and defense narrative drafting.
  */
 
-import { verifyEvidence, scoreDispute, draftResponse, normalizeDispute } from "./engine.js";
+import { verifyEvidence, scoreDispute, draftResponse, normalizeDispute, ResponseNarrativeAgent } from "./engine.js";
 import { assessTransactionRisk } from "./transactionRiskAgent.js";
 import { toMlFeatures } from "./mlAdapter.js";
 
@@ -86,9 +86,9 @@ export async function runCasePipeline(rawDispute, { mode = "assistive" } = {}) {
     });
   }
 
-  let draft = draftResponse(dispute, evidence);
+  const narrativeAgent = new ResponseNarrativeAgent();
   const winProbability = typeof mlScoring.winProbability === "number" ? mlScoring.winProbability : null;
-  draft = applyMlProbabilityToDraft(draft, winProbability);
+  let draft = await narrativeAgent.generateDraft(dispute, evidence, mlScoring);
   trace.push({
     agent: "ResponseNarrativeAgent",
     status: "success",

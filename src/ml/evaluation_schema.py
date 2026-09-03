@@ -30,6 +30,14 @@ if str(ml_dir) not in sys.path:
     sys.path.insert(0, str(ml_dir))
 
 from features import LABEL_ORDER, edge_case_mask, load_csv, matrix_and_labels  # noqa: E402
+try:
+    from .score_dispute import StringLabelXGBClassifier  # noqa: F401
+except ImportError:
+    from score_dispute import StringLabelXGBClassifier  # noqa: F401
+
+main_mod = sys.modules.get("__main__")
+if main_mod:
+    setattr(main_mod, "StringLabelXGBClassifier", StringLabelXGBClassifier)
 
 # ─── Schema version constant ──────────────────────────────────────────────────
 SCHEMA_VERSION = "1.0"
