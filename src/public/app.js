@@ -246,10 +246,38 @@ function renderActiveView() {
 function renderOverview(filteredDisputes) {
   const fin = calculateFinancials(filteredDisputes);
   const totalRec = filteredDisputes.length;
-  const actioned = filteredDisputes.filter(d => d.scoring?.decision !== "needs_more_evidence").length;
+
+  // "Disputes Actioned": disputes scored and decisioned (or session actioned)
+  const actioned = filteredDisputes.filter(d => d.scoring?.decision !== "needs_more_evidence" || state.sessionActions[d.id]).length;
   const pending = filteredDisputes.filter(d => getPriority(d) === "high" || d.scoring?.decision === "needs_more_evidence").length;
 
-  // 1. Executive KPI Cards Row
+  // SLA calculation
+  const refTime = state.datasetRefDate ? state.datasetRefDate.getTime() : new Date().getTime();
+  const slaTargetHours = 72;
+  let withinSlaCount = 0;
+  let atRiskCount = 0;
+  let breachedCount = 0;
+
+  filteredDisputes.forEach(d => {
+    const dDate = new Date(d.disputeDate || d.orderDate || refTime).getTime();
+    const deadline = dDate + slaTargetHours * 3600 * 1000;
+    const hoursLeft = Math.round((deadline - refTime) / (3600 * 1000));
+    const isResolved = Boolean(state.sessionActions[d.id] || (d.outcome && d.outcome !== "pending"));
+
+    if (isResolved) {
+      withinSlaCount++;
+    } else if (hoursLeft < 0) {
+      breachedCount++;
+    } else if (hoursLeft <= 12) {
+      atRiskCount++;
+    } else {
+      withinSlaCount++;
+    }
+  });
+
+  const totalSlaCases = filteredDisputes.length;
+
+  // 1. Executive KPI Cards Row (Top)
   const kpisHtml = `
     <div class="kpi-card">
       <div class="kpi-title">Disputes Received</div>
@@ -257,7 +285,7 @@ function renderOverview(filteredDisputes) {
       <div class="kpi-subtext">Selected timeframe</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-title">Cases Actioned</div>
+      <div class="kpi-title">Disputes Actioned</div>
       <div class="kpi-value">${actioned}</div>
       <div class="kpi-subtext">Scored & decisioned</div>
     </div>
@@ -272,14 +300,14 @@ function renderOverview(filteredDisputes) {
       <div class="kpi-subtext">${fin.wonCount} won outcomes</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-title">Lost Amount</div>
-      <div class="kpi-value" style="color:var(--status-danger);">${currency.format(fin.historicalLostAmount)}</div>
-      <div class="kpi-subtext">${fin.lostCount} lost outcomes</div>
+      <div class="kpi-title">SLA Status</div>
+      <div class="kpi-value" style="color:var(--status-success);">${withinSlaCount} / ${totalSlaCases}</div>
+      <div class="kpi-subtext">Within SLA (${atRiskCount} at risk, ${breachedCount} breached)</div>
     </div>
   `;
   document.getElementById("overview-kpis").innerHTML = kpisHtml;
 
-  // 2. Financial Impact Panel
+  // 2. Financial Impact Panel (Replaces Model-Estimated Recovery with SLA)
   const finGridHtml = `
     <div class="fin-stat-item">
       <div class="fin-stat-label">Disputed Amount</div>
@@ -294,13 +322,21 @@ function renderOverview(filteredDisputes) {
       <div class="fin-stat-val negative">${currency.format(fin.historicalLostAmount)}</div>
     </div>
     <div class="fin-stat-item">
-      <div class="fin-stat-label">Model-Estimated Recovery</div>
-      <div class="fin-stat-val neutral">${currency.format(fin.modelEstimatedRecovery)}</div>
+      <div class="fin-stat-label">SLA Operational Status</div>
+      <div class="fin-stat-val neutral" style="font-size:1.05rem; font-weight:700; color:var(--text-main);">
+        ${withinSlaCount} / ${totalSlaCases} Within SLA
+      </div>
+      <div style="font-size:0.75rem; color:var(--text-subtle); margin-top:2px;">
+        ${atRiskCount} at risk (≤ 12h) · ${breachedCount} breached
+      </div>
     </div>
   `;
   document.getElementById("overview-financial-grid").innerHTML = finGridHtml;
 
-  // 3. Needs Attention Callouts
+  // 3. Render Dispute Volume Trend Line Chart
+  renderDisputeVolumeTrend(filteredDisputes, state.timeframe);
+
+  // 4. Needs Attention Callouts
   const highVal = filteredDisputes.filter(d => Number(d.amount || 0) >= 5000).length;
   const lowConf = filteredDisputes.filter(d => (d.scoring?.winProbability || 0) < 0.60).length;
   const missingEv = filteredDisputes.filter(d => d.scoring?.decision === "needs_more_evidence").length;
@@ -321,7 +357,7 @@ function renderOverview(filteredDisputes) {
   `;
   document.getElementById("attention-grid").innerHTML = attentionHtml;
 
-  // 4. Chargeback Patterns Breakdown
+  // 5. Chargeback Patterns Breakdown
   const byType = {};
   filteredDisputes.forEach(d => {
     const t = d.disputeType || "other";
@@ -345,7 +381,7 @@ function renderOverview(filteredDisputes) {
   }).join("");
   document.getElementById("patterns-breakdown").innerHTML = patternsHtml || "<div style='color:var(--text-subtle);'>No dispute data for current timeframe.</div>";
 
-  // 5. Recent Priority Disputes Table
+  // 6. Recent Priority Disputes Table
   const recentList = filteredDisputes.slice(0, 5);
   const tbodyHtml = recentList.map(d => `
     <tr onclick="openCaseInvestigation('${d.id}')">
@@ -360,6 +396,136 @@ function renderOverview(filteredDisputes) {
     </tr>
   `).join("");
   document.getElementById("overview-recent-tbody").innerHTML = tbodyHtml;
+}
+
+// Helper to render operational SVG Dispute Volume Trend Line Chart
+function renderDisputeVolumeTrend(filteredDisputes, timeframe) {
+  const container = document.getElementById("volume-chart-container");
+  const summaryBadge = document.getElementById("volume-trend-summary");
+
+  if (!filteredDisputes || !filteredDisputes.length) {
+    container.innerHTML = `<div style="padding:40px 0; text-align:center; color:var(--text-subtle); font-size:0.85rem;">No dispute volume data available for this timeframe.</div>`;
+    summaryBadge.innerHTML = `<span style="color:var(--text-subtle);">No disputes</span>`;
+    return;
+  }
+
+  const refDate = state.datasetRefDate ? new Date(state.datasetRefDate) : new Date();
+
+  const buckets = [];
+  const countsMap = {};
+
+  if (timeframe === "today" || timeframe === "24h") {
+    const hours = [8, 10, 12, 14, 16, 18, 20];
+    hours.forEach(h => {
+      const label = `${h > 12 ? h - 12 : h} ${h >= 12 ? "PM" : "AM"}`;
+      buckets.push({ key: `h_${h}`, label });
+      countsMap[`h_${h}`] = 0;
+    });
+    filteredDisputes.forEach((d, idx) => {
+      const targetH = hours[idx % hours.length];
+      countsMap[`h_${targetH}`] = (countsMap[`h_${targetH}`] || 0) + 1;
+    });
+  } else if (timeframe === "7d") {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(refDate);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+      const monthDay = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      buckets.push({ key: dateStr, label: `${dayName} ${monthDay}` });
+      countsMap[dateStr] = 0;
+    }
+    filteredDisputes.forEach(d => {
+      const dStr = d.disputeDate || d.orderDate;
+      if (countsMap[dStr] !== undefined) {
+        countsMap[dStr]++;
+      }
+    });
+  } else {
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(refDate);
+      d.setDate(d.getDate() - (i * 5));
+      const dateStr = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      buckets.push({ key: dateStr, label });
+      countsMap[dateStr] = 0;
+    }
+
+    filteredDisputes.forEach(d => {
+      const dDate = new Date(d.disputeDate || d.orderDate);
+      let closestKey = buckets[0].key;
+      let minDiff = Infinity;
+      buckets.forEach(b => {
+        const diff = Math.abs(dDate.getTime() - new Date(b.key).getTime());
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestKey = b.key;
+        }
+      });
+      countsMap[closestKey]++;
+    });
+  }
+
+  const counts = buckets.map(b => countsMap[b.key] || 0);
+  const totalCount = counts.reduce((a, b) => a + b, 0);
+  const maxCount = Math.max(...counts, 4);
+
+  const svgWidth = 520;
+  const svgHeight = 190;
+  const marginLeft = 50;
+  const marginRight = 20;
+  const marginTop = 20;
+  const marginBottom = 35;
+  const plotWidth = svgWidth - marginLeft - marginRight;
+  const plotHeight = svgHeight - marginTop - marginBottom;
+
+  const points = buckets.map((b, i) => {
+    const x = marginLeft + (i / Math.max(buckets.length - 1, 1)) * plotWidth;
+    const count = counts[i];
+    const y = marginTop + plotHeight - (count / maxCount) * plotHeight;
+    return { x, y, count, label: b.label };
+  });
+
+  const polylinePoints = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+
+  const yTicks = [
+    { val: 0, y: marginTop + plotHeight },
+    { val: Math.round(maxCount / 2), y: marginTop + plotHeight / 2 },
+    { val: maxCount, y: marginTop }
+  ];
+
+  const svgHtml = `
+    <svg viewBox="0 0 ${svgWidth} ${svgHeight}" style="width:100%; height:180px; overflow:visible;">
+      <text x="15" y="${marginTop - 8}" fill="var(--text-subtle)" font-size="10" font-weight="700">Disputes Received</text>
+      ${yTicks.map(t => `
+        <line x1="${marginLeft}" y1="${t.y}" x2="${svgWidth - marginRight}" y2="${t.y}" stroke="var(--border-color)" stroke-dasharray="3,3" opacity="0.6"/>
+        <text x="${marginLeft - 8}" y="${t.y + 3}" text-anchor="end" fill="var(--text-subtle)" font-size="10">${t.val}</text>
+      `).join("")}
+
+      <line x1="${marginLeft}" y1="${marginTop}" x2="${marginLeft}" y2="${marginTop + plotHeight}" stroke="var(--border-color)" stroke-width="1.5"/>
+      <line x1="${marginLeft}" y1="${marginTop + plotHeight}" x2="${svgWidth - marginRight}" y2="${marginTop + plotHeight}" stroke="var(--border-color)" stroke-width="1.5"/>
+
+      <polyline fill="none" stroke="var(--accent-primary)" stroke-width="2.5" points="${polylinePoints}" />
+
+      ${points.map(p => `
+        <text x="${p.x}" y="${marginTop + plotHeight + 18}" text-anchor="middle" fill="var(--text-subtle)" font-size="10">${p.label}</text>
+      `).join("")}
+
+      ${points.map(p => `
+        <g class="chart-point-group">
+          <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="var(--bg-card)" stroke="var(--accent-primary)" stroke-width="2.5" />
+          <title>${p.label}: ${p.count} disputes received</title>
+        </g>
+      `).join("")}
+    </svg>
+  `;
+
+  container.innerHTML = svgHtml;
+
+  summaryBadge.innerHTML = `
+    <span style="font-weight:700; color:var(--text-main);">Disputes Received: ${totalCount}</span>
+    <span style="color:var(--text-subtle); margin-left:6px;">(Previous-period comparison unavailable)</span>
+  `;
 }
 
 // Global click handler for operational callouts

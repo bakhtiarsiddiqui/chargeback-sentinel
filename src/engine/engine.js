@@ -52,6 +52,39 @@ function round(value) {
   return Math.round(value * 100) / 100;
 }
 
+export const SLA_TARGET_HOURS = Number(process.env.SLA_TARGET_HOURS || 72);
+
+export function calculateDisputeSla(dispute, refDate = new Date()) {
+  const normalized = normalizeDispute(dispute);
+  const disputeTime = new Date(normalized.disputeDate || normalized.orderDate || refDate).getTime();
+  const deadlineTime = disputeTime + SLA_TARGET_HOURS * 3600 * 1000;
+  const refTime = new Date(refDate).getTime();
+  const hoursRemaining = Math.round((deadlineTime - refTime) / (3600 * 1000));
+
+  const isResolved = Boolean(normalized.sessionAction || (normalized.outcome && normalized.outcome !== "pending"));
+
+  let status = "within_sla";
+  if (isResolved) {
+    status = "within_sla";
+  } else if (hoursRemaining < 0) {
+    status = "breached";
+  } else if (hoursRemaining <= 12) {
+    status = "at_risk";
+  } else {
+    status = "within_sla";
+  }
+
+  return {
+    disputeId: normalized.id,
+    slaTargetHours: SLA_TARGET_HOURS,
+    disputeDate: normalized.disputeDate,
+    deadlineIso: new Date(deadlineTime).toISOString(),
+    hoursRemaining,
+    isResolved,
+    status
+  };
+}
+
 export function normalizeDispute(rawDispute) {
   return {
     ...rawDispute,
