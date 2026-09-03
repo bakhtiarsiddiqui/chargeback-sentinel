@@ -29,6 +29,6 @@ export function toMlFeatures(normalizedDispute) {
     cardholder_ip_country: cardholderIpCountry,
     billing_country: billingCountry,
     ip_country_matches_billing_country: cardholderIpCountry === billingCountry,
-    completeness_score: normalizedDispute._evidenceCompletenessScore ?? 0
+    completeness_score: normalizedDispute._evidenceCompletenessScore ?? null
   };
 }
