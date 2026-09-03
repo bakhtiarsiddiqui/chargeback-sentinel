@@ -83,7 +83,23 @@ app.post("/api/case/process", async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error("Multi-Agent Orchestrator Error:", error);
-    res.status(500).json({ error: "Failed to run multi-agent case pipeline" });
+    res.status(500).json({ error: "Failed to run multi-agent case pipeline", detail: String(error.message || error) });
+  }
+});
+
+app.post("/api/case/:id/process", async (req, res) => {
+  const dispute = normalizedDisputes.find((item) => item.id === req.params.id);
+  if (!dispute) {
+    res.status(404).json({ error: "Dispute not found" });
+    return;
+  }
+
+  try {
+    const result = await runCasePipeline(dispute, { mode: req.body?.mode || "assistive" });
+    res.json(result);
+  } catch (error) {
+    console.error("Multi-Agent Orchestrator Error:", error);
+    res.status(500).json({ error: "Failed to run multi-agent case pipeline", detail: String(error.message || error) });
   }
 });
 

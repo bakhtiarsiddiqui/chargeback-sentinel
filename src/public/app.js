@@ -5,7 +5,6 @@ const currency = new Intl.NumberFormat("en-IN", {
 });
 
 let selectedId = null;
-let currentDisputePayload = null;
 
 function setStatus(message = "") {
   const banner = document.getElementById("app-status");
@@ -136,17 +135,17 @@ function renderAgentTimeline(auditTrail = []) {
 }
 
 async function runMultiAgentPipeline() {
-  if (!currentDisputePayload) return;
+  if (!selectedId) return;
 
   const btn = document.getElementById("run-pipeline-btn");
   btn.disabled = true;
   btn.textContent = "⏳ Running Pipeline...";
 
   try {
-    const response = await fetch("/api/case/process", {
+    const response = await fetch(`/api/case/${selectedId}/process`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...currentDisputePayload, mode: "assistive" })
+      body: JSON.stringify({ mode: "assistive" })
     });
 
     if (!response.ok) {
@@ -156,14 +155,18 @@ async function runMultiAgentPipeline() {
     const result = await response.json();
     const { mlScoring, heuristicScoring, evidence, draft, auditTrail, requiresHumanApproval } = result;
 
-    // Update Win Probability with live ML model result
-    const winProb = mlScoring.winProbability !== undefined ? mlScoring.winProbability : heuristicScoring.winProbability;
-    document.getElementById("win-probability").textContent = `${Math.round(winProb * 100)}%`;
+    const liveWin = typeof mlScoring.winProbability === "number" ? mlScoring.winProbability : null;
+    document.getElementById("win-probability").textContent = liveWin === null
+      ? `${Math.round(heuristicScoring.winProbability * 100)}% heuristic`
+      : `${Math.round(liveWin * 100)}%`;
 
     const modelBadge = document.getElementById("ml-model-badge");
-    if (mlScoring.modelType) {
+    if (mlScoring.error) {
+      modelBadge.textContent = "ML unavailable";
+      modelBadge.className = "sub-tag warning-tag";
+    } else if (mlScoring.modelType) {
       modelBadge.textContent = mlScoring.modelType;
-      modelBadge.className = mlScoring.error ? "sub-tag warning-tag" : "sub-tag success-tag";
+      modelBadge.className = "sub-tag success-tag";
     }
 
     // Toggle Human Approval Banner
@@ -200,7 +203,6 @@ async function loadDetail(id) {
   }
   const payload = await response.json();
   const { dispute, verification, scoring, draft, auditTrail } = payload;
-  currentDisputePayload = dispute;
 
   document.getElementById("detail-empty").classList.add("hidden");
   document.getElementById("detail-content").classList.remove("hidden");

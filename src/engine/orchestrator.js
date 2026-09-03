@@ -11,11 +11,25 @@ import { toMlFeatures } from "./mlAdapter.js";
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://127.0.0.1:8000";
 
+function applyMlProbabilityToDraft(draft, winProbability) {
+  if (typeof winProbability !== "number") {
+    return draft;
+  }
+
+  const mlSentence = `Our review indicates a ${Math.round(winProbability * 100)}% contest success likelihood (ML-scored) based on merchant-side fulfillment and customer evidence.`;
+  return {
+    ...draft,
+    draftText: draft.draftText.replace(
+      /Our review indicates a \d+% contest success likelihood based on merchant-side fulfillment and customer evidence\./,
+      mlSentence
+    )
+  };
+}
+
 export async function runCasePipeline(rawDispute, { mode = "assistive" } = {}) {
   const trace = [];
   const dispute = normalizeDispute(rawDispute);
 
-  // Agent 1: Pre-Transaction Risk Agent
   const txnRisk = assessTransactionRisk(dispute);
   trace.push({
     agent: "TransactionRiskAgent",
@@ -25,7 +39,6 @@ export async function runCasePipeline(rawDispute, { mode = "assistive" } = {}) {
     timestamp: new Date().toISOString()
   });
 
-  // Agent 2: Evidence Verification Agent
   const evidence = verifyEvidence(dispute);
   trace.push({
     agent: "EvidenceVerificationAgent",
@@ -35,10 +48,9 @@ export async function runCasePipeline(rawDispute, { mode = "assistive" } = {}) {
     timestamp: new Date().toISOString()
   });
 
-  // Agent 3: Dispute Win Probability Agent (HTTP call to Python FastAPI ML microservice)
   let mlScoring;
   try {
-    const features = toMlFeatures({ ...dispute, _evidenceCompletenessScore: evidence.completenessScore });
+    const features = toMlFeatures(dispute);
     const response = await fetch(`${ML_SERVICE_URL}/score`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -58,40 +70,38 @@ export async function runCasePipeline(rawDispute, { mode = "assistive" } = {}) {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    // Fallback gracefully to JS heuristic engine if ML microservice is unreachable
-    const heuristic = scoreDispute(dispute);
     mlScoring = {
       agent: "DisputeWinProbabilityAgent",
-      winProbability: heuristic.winProbability,
-      modelType: "Heuristic Engine (Fallback)",
-      error: "ML service unreachable, using fallback heuristic",
-      dataNotice: "Fallback mode active"
+      winProbability: null,
+      modelType: null,
+      error: "ML agent unreachable, no fallback score computed",
+      detail: String(error.message || error)
     };
     trace.push({
       agent: "DisputeWinProbabilityAgent",
       status: "warning",
       output: mlScoring,
-      summary: `ML microservice offline — fallback heuristic estimated win probability ${Math.round(heuristic.winProbability * 100)}%.`,
+      summary: "ML microservice offline — no win probability substituted from the heuristic engine.",
       timestamp: new Date().toISOString()
     });
   }
 
-  // Agent 4: Response Narrative Agent
-  const draft = draftResponse(dispute, evidence);
+  let draft = draftResponse(dispute, evidence);
+  const winProbability = typeof mlScoring.winProbability === "number" ? mlScoring.winProbability : null;
+  draft = applyMlProbabilityToDraft(draft, winProbability);
   trace.push({
     agent: "ResponseNarrativeAgent",
     status: "success",
     output: draft,
-    summary: "Generated merchant defense narrative & submission checklist.",
+    summary: winProbability === null
+      ? "Generated merchant defense narrative (heuristic likelihood left in draft; ML score unavailable)."
+      : "Generated merchant defense narrative using ML-scored win probability.",
     timestamp: new Date().toISOString()
   });
 
-  // Heuristic decision logic for recovery calculations
   const heuristicScoring = scoreDispute(dispute);
-
-  // Governance Policy: Assistive mode flags cases for human analyst review if high-value or low win-confidence
   const requiresHumanApproval =
-    mode === "assistive" && (dispute.amount >= 5000 || (mlScoring.winProbability ?? 1) < 0.60);
+    mode === "assistive" && (dispute.amount >= 5000 || winProbability === null || winProbability < 0.6);
 
   return {
     caseId: dispute.id,

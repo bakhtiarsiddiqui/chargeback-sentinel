@@ -15,9 +15,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence
 
-TOTAL_RECORDS = 1200
+TOTAL_RECORDS = 50000
 DEFAULT_SEED = 20260829
-EDGE_CASE_COUNT = 24
+EDGE_CASE_COUNT = 48
 OUTPUT_DIR = Path("data/ml")
 LABELS = ("won", "lost", "not_contested")
 FIELDNAMES = [
@@ -81,7 +81,8 @@ def synthetic_label(record: Dict[str, object], rng: random.Random) -> str:
         return "not_contested"
 
     if record["three_ds_authenticated"] and record["avs_match"] and record["cvv_match"]:
-        return "won" if rng.random() < 0.88 else "lost"
+        win_prob = 0.60 if record["is_first_time_customer"] else 0.88
+        return "won" if rng.random() < win_prob else "lost"
 
     if (
         not record["device_id_match"]
@@ -94,7 +95,7 @@ def synthetic_label(record: Dict[str, object], rng: random.Random) -> str:
         return "lost" if rng.random() < 0.70 else "won"
 
     if record["is_first_time_customer"]:
-        return "lost" if rng.random() < 0.62 else "won"
+        return "lost" if rng.random() < 0.70 else "won"
 
     return "won" if rng.random() < 0.50 else "lost"
 
@@ -199,6 +200,50 @@ def edge_case_templates() -> List[Dict[str, object]]:
     add_template(21, three_ds_authenticated=False, avs_match=False, cvv_match=False, is_first_time_customer=True)
     add_template(22, three_ds_authenticated=False, refund_issued=True, txn_amount=8900)
     add_template(23, three_ds_authenticated=False, cardholder_ip_country="AE", billing_country="IN", is_first_time_customer=True, device_id_match=False)
+
+    # --- Micro-transaction edge cases ---
+    add_template(24, txn_amount=500, three_ds_authenticated=True, cvv_match=True, avs_match=True)
+    add_template(25, txn_amount=501, three_ds_authenticated=False, cvv_match=False, avs_match=False, is_first_time_customer=True)
+    add_template(26, txn_amount=550, refund_issued=True, device_id_match=False)
+
+    # --- High-value transaction edge cases ---
+    add_template(27, txn_amount=14999, three_ds_authenticated=True, cvv_match=True, avs_match=True, customer_disputed_before_count=5)
+    add_template(28, txn_amount=15000, three_ds_authenticated=False, device_id_match=False, cardholder_ip_country="GB", billing_country="AE")
+    add_template(29, txn_amount=14800, is_first_time_customer=True, customer_txn_history_count=0, previous_txns_from_device=0, device_id_match=False)
+
+    # --- Multi-currency and cross-border edge cases ---
+    add_template(30, cardholder_ip_country="US", billing_country="GB", device_id_match=False, three_ds_authenticated=False)
+    add_template(31, cardholder_ip_country="SG", billing_country="AE", is_first_time_customer=True, cvv_match=False)
+    add_template(32, cardholder_ip_country="GB", billing_country="US", avs_match=False, delivery_address_match_billing=False)
+
+    # --- Extreme repeat offender edge cases ---
+    add_template(33, customer_disputed_before_count=5, customer_txn_history_count=20, previous_txns_from_device=10, three_ds_authenticated=True, cvv_match=True, avs_match=True)
+    add_template(34, customer_disputed_before_count=5, is_first_time_customer=True, customer_txn_history_count=0, device_id_match=False)
+    add_template(35, customer_disputed_before_count=4, refund_issued=True, txn_amount=14500)
+
+    # --- Device velocity / trust abuse edge cases ---
+    add_template(36, previous_txns_from_device=10, device_id_match=True, is_first_time_customer=True, customer_txn_history_count=0)
+    add_template(37, previous_txns_from_device=0, device_id_match=True, customer_txn_history_count=18, three_ds_authenticated=False)
+    add_template(38, previous_txns_from_device=1, device_id_match=False, customer_txn_history_count=15, cardholder_ip_country="AE", billing_country="IN")
+
+    # --- Conflicting strong signals edge cases ---
+    add_template(39, three_ds_authenticated=True, cvv_match=True, avs_match=True, device_id_match=False, cardholder_ip_country="US", billing_country="IN", is_first_time_customer=True)
+    add_template(40, three_ds_authenticated=True, cvv_match=False, avs_match=False, device_id_match=True, previous_txns_from_device=8, customer_txn_history_count=15, delivery_address_match_billing=True)
+    add_template(41, three_ds_authenticated=False, cvv_match=True, avs_match=True, device_id_match=True, customer_disputed_before_count=5, txn_amount=12000)
+
+    # --- Rapid dispute filing edge cases ---
+    add_template(42, txn_amount=7500, three_ds_authenticated=True, cvv_match=True, avs_match=True, customer_disputed_before_count=3, delivery_address_match_billing=False)
+    add_template(43, txn_amount=3200, three_ds_authenticated=False, cvv_match=False, avs_match=False, device_id_match=False, is_first_time_customer=True, cardholder_ip_country="SG", billing_country="IN")
+
+    # --- All signals positive (should be easy win) ---
+    add_template(44, txn_amount=6000, three_ds_authenticated=True, cvv_match=True, avs_match=True, device_id_match=True, previous_txns_from_device=7, customer_txn_history_count=14, delivery_address_match_billing=True, customer_disputed_before_count=0)
+
+    # --- All signals negative (should be easy loss) ---
+    add_template(45, txn_amount=14200, three_ds_authenticated=False, cvv_match=False, avs_match=False, device_id_match=False, previous_txns_from_device=0, customer_txn_history_count=0, is_first_time_customer=True, delivery_address_match_billing=False, customer_disputed_before_count=5, cardholder_ip_country="GB", billing_country="IN")
+
+    # --- Refund already issued but strong fraud signals ---
+    add_template(46, refund_issued=True, three_ds_authenticated=False, cvv_match=False, avs_match=False, device_id_match=False, customer_disputed_before_count=4, txn_amount=13000)
+    add_template(47, refund_issued=True, three_ds_authenticated=True, cvv_match=True, avs_match=True, device_id_match=True, customer_disputed_before_count=0, txn_amount=2500)
 
     return templates
 
@@ -355,7 +400,14 @@ def dataset_summary(splits: Dict[str, Sequence[Dict[str, object]]]) -> str:
 
 
 def main() -> None:
-    splits = generate_dataset()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Generate synthetic chargeback dispute dataset.")
+    parser.add_argument("--total", type=int, default=TOTAL_RECORDS, help="Total records to generate")
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="Random seed")
+    args = parser.parse_args()
+
+    splits = generate_dataset(total_records=args.total, seed=args.seed)
     for split_name, records in splits.items():
         write_csv(OUTPUT_DIR / f"{split_name}.csv", records)
     print(dataset_summary(splits))

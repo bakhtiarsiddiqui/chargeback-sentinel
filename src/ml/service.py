@@ -40,9 +40,8 @@ _bundle: Dict[str, Any] = {}
 def load_model() -> None:
     global _bundle
     if not MODEL_PATH.exists():
-        raise RuntimeError(
-            f"Model artifact {MODEL_PATH.resolve()} not found. Run 'npm run ml:train' first."
-        )
+        _bundle = {}
+        return
     _bundle = joblib.load(MODEL_PATH)
 
 
@@ -58,23 +57,30 @@ class DisputeFeatures(BaseModel):
     delivery_address_match_billing: bool = Field(False, description="Delivery matches billing address")
     three_ds_authenticated: bool = Field(False, description="3DS 2.0 authentication status")
     refund_issued: bool = Field(False, description="Refund initiated flag")
-    ip_country_matches_billing_country: bool = Field(False, description="IP country matches billing country")
-    completeness_score: float = Field(0.0, description="Evidence completeness score [0.0 - 1.0]")
+    cardholder_ip_country: str = Field("IN", description="Cardholder IP country")
+    billing_country: str = Field("IN", description="Billing country")
+    ip_country_matches_billing_country: bool | None = Field(None, description="Optional precomputed geo match")
+    completeness_score: float | None = Field(None, description="Optional; recomputed from authentication signals")
 
 
 @app.get("/health")
 def health() -> Dict[str, Any]:
+    model_loaded = "model" in _bundle
     return {
-        "status": "ok",
+        "status": "ok" if model_loaded else "model_not_loaded",
         "service": "DisputeWinProbabilityAgent",
-        "modelLoaded": "model" in _bundle,
+        "modelLoaded": model_loaded,
+        "modelPath": str(MODEL_PATH.resolve()),
     }
 
 
 @app.post("/score")
 def score(features: DisputeFeatures) -> Dict[str, Any]:
     if "model" not in _bundle:
-        raise HTTPException(status_code=500, detail="ML model bundle not loaded.")
+        raise HTTPException(
+            status_code=503,
+            detail="Model not loaded — run `npm run ml:train` first, then restart this service.",
+        )
 
     record = features.model_dump()
     model = _bundle["model"]

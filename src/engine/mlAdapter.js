@@ -1,10 +1,17 @@
 /**
  * ML Feature Adapter (src/engine/mlAdapter.js)
  * ---------------------------------------------
- * Bridges legacy/frontend dispute schemas (camelCase) to the Python ML microservice schema (snake_case).
+ * Bridges camelCase dispute records to the Python ML service schema.
+ * Completeness is computed server-side from authentication signals; this adapter
+ * sends raw country fields so geo-match is not inferred as true when both are missing.
  */
 
 export function toMlFeatures(normalizedDispute) {
+  const billingCountry = normalizedDispute.billingCountry || "IN";
+  const ipMatch = Boolean(normalizedDispute.ipCountryMatch);
+  const cardholderIpCountry =
+    normalizedDispute.cardholderIpCountry || (ipMatch ? billingCountry : "AE");
+
   return {
     txn_amount: Number(normalizedDispute.amount || 0),
     previous_txns_from_device: Number(normalizedDispute.previousTxnsFromDevice ?? 1),
@@ -19,7 +26,8 @@ export function toMlFeatures(normalizedDispute) {
     delivery_address_match_billing: Boolean(normalizedDispute.deliveryAddressMatchBilling ?? true),
     three_ds_authenticated: Boolean(normalizedDispute.threeDsAuthenticated ?? false),
     refund_issued: Boolean(normalizedDispute.refundInitiated ?? false),
-    ip_country_matches_billing_country: Boolean(normalizedDispute.ipCountryMatch ?? false),
-    completeness_score: Number(normalizedDispute._evidenceCompletenessScore ?? 0)
+    cardholder_ip_country: cardholderIpCountry,
+    billing_country: billingCountry,
+    ip_country_matches_billing_country: cardholderIpCountry === billingCountry
   };
 }

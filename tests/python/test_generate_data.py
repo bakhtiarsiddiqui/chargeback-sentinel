@@ -13,10 +13,14 @@ class GenerateDataTests(unittest.TestCase):
         self.all_records = [record for rows in self.splits.values() for record in rows]
 
     def test_total_record_count_and_split_sizes(self) -> None:
-        self.assertEqual(len(self.all_records), 1200)
-        self.assertEqual(len(self.splits["train"]), 839)
-        self.assertEqual(len(self.splits["val"]), 180)
-        self.assertEqual(len(self.splits["test"]), 181)
+        self.assertEqual(len(self.all_records), 50000)
+        total_train = len(self.splits["train"])
+        total_val = len(self.splits["val"])
+        total_test = len(self.splits["test"])
+        self.assertEqual(total_train + total_val + total_test, 50000)
+        self.assertTrue(34000 <= total_train <= 36000)
+        self.assertTrue(7000 <= total_val <= 8000)
+        self.assertTrue(7000 <= total_test <= 8000)
 
     def test_schema_fields_are_present(self) -> None:
         for record in self.all_records[:10]:
@@ -24,14 +28,14 @@ class GenerateDataTests(unittest.TestCase):
 
     def test_edge_case_count_is_tagged(self) -> None:
         edge_records = [record for record in self.all_records if record["is_edge_case"]]
-        self.assertGreaterEqual(len(edge_records), 20)
-        self.assertLessEqual(len(edge_records), 25)
+        self.assertGreaterEqual(len(edge_records), 44)
+        self.assertLessEqual(len(edge_records), 50)
 
     def test_label_distribution_is_close_to_requested_target(self) -> None:
         counts = Counter(record["label"] for record in self.all_records)
-        self.assertTrue(320 <= counts["won"] <= 400)
-        self.assertTrue(600 <= counts["lost"] <= 720)
-        self.assertTrue(140 <= counts["not_contested"] <= 220)
+        self.assertTrue(13500 <= counts["won"] <= 16500)
+        self.assertTrue(25000 <= counts["lost"] <= 30000)
+        self.assertTrue(6000 <= counts["not_contested"] <= 9000)
 
     def test_each_split_contains_edge_cases_and_labels(self) -> None:
         for split_name, records in self.splits.items():
