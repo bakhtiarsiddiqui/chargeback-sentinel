@@ -115,3 +115,5 @@ export async function runCasePipeline(rawDispute, { mode = "assistive" } = {}) {
     auditTrail: trace
   };
 }
+
+export { normalizeDispute };
