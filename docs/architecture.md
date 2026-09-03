@@ -1,27 +1,71 @@
 # System Architecture
 
 ## Overview
-Chargeback Sentinel is built with a decoupled architecture designed for high throughput, explainable ML scoring, and evidence verification.
+Chargeback Sentinel is a multi-agent orchestration platform that coordinates pre-transaction risk assessment, evidence verification, live ML win-probability inference, and defense narrative generation through an audit-logged `OrchestratorAgent`.
 
 ```mermaid
-graph TD
-    A[Payment Gateway / Merchant System] -->|Dispute Webhook| B[Node.js Express API Server]
-    B --> C[Rules Engine & Evidence Verifier]
-    B --> D[Python ML Scorer Model]
-    C --> E[Dispute Risk & Score Assessor]
-    D --> E
-    E --> F[Response Auto-Draft Generator]
-    F --> G[Analyst Dashboard UI]
+sequenceDiagram
+    participant UI as Analyst Dashboard
+    participant API as Express API (:3000)
+    participant ORC as OrchestratorAgent
+    participant TRA as TransactionRiskAgent
+    participant EVA as EvidenceVerificationAgent
+    participant ML as DisputeWinProbabilityAgent
+    participant PY as FastAPI ML Service (:8000)
+    participant RNA as ResponseNarrativeAgent
+
+    UI->>API: POST /api/case/process
+    API->>ORC: runCasePipeline(dispute)
+    ORC->>TRA: assessTransactionRisk(txn)
+    TRA-->>ORC: riskScore, decision, flags
+    ORC->>EVA: verifyEvidence(dispute)
+    EVA-->>ORC: completenessScore, missingItems
+    ORC->>ML: toMlFeatures + HTTP POST /score
+    ML->>PY: POST /score (snake_case features)
+    alt ML service online
+        PY-->>ML: winProbability, modelType
+    else ML service offline
+        ML-->>ORC: Heuristic fallback scoring
+    end
+    ORC->>RNA: draftResponse(dispute, evidence)
+    RNA-->>ORC: draftText, citations, checklist
+    ORC-->>API: auditTrail, requiresHumanApproval
+    API-->>UI: Multi-agent pipeline result
 ```
 
+## Agent Responsibilities
+
+| Agent | Role | Implementation |
+| :--- | :--- | :--- |
+| **TransactionRiskAgent** | Pre-transaction risk flags (₹5,000+ without 3DS, IP mismatch, device fingerprint, first-time high-ticket) | `src/engine/transactionRiskAgent.js` |
+| **EvidenceVerificationAgent** | Deterministic evidence completeness and risk flag checker | `src/engine/engine.js` |
+| **DisputeWinProbabilityAgent** | Live scikit-learn win probability via FastAPI microservice with heuristic fallback | `src/ml/service.py` + `src/engine/mlAdapter.js` |
+| **ResponseNarrativeAgent** | Merchant defense narrative and submission checklist generator | `src/engine/engine.js` |
+| **OrchestratorAgent** | Coordinates all agents, appends audit trail, enforces assistive governance | `src/engine/orchestrator.js` |
+
 ## Core Subsystems
+
 1. **Node.js Express API Server (`src/server/server.js`)**:
-   - Manages dispute queue ingestion, REST endpoint orchestration, and serving the single-page analyst web dashboard.
-2. **Rules Engine (`src/engine/engine.js`)**:
-   - Evaluates mandatory evidence requirements for specific dispute types (`product_not_received`, `fraudulent_transaction`, `digital_service`).
-   - Computes expected margin recovery vs analyst review labor cost.
-3. **ML Scorer Pipeline (`src/ml/`)**:
-   - Trains an explainable Logistic Regression classifier using 1200 stratified synthetic records.
-   - Extracts 13 numerical and boolean risk signals including 3DS auth, AVS/CVV matching, geo-consistency, and device fingerprint matching.
+   - Manages dispute queue ingestion, REST endpoint orchestration, and serving the analyst web dashboard.
+   - Exposes `POST /api/case/process` to trigger the full multi-agent pipeline.
+
+2. **Orchestrator & Domain Agents (`src/engine/`)**:
+   - `orchestrator.js` sequences all four agents and evaluates `requiresHumanApproval` for assistive governance mode.
+   - `transactionRiskAgent.js` applies transparent pre-transaction rule thresholds.
+   - `mlAdapter.js` bridges camelCase dispute schemas to the Python ML service snake_case schema.
+
+3. **Python ML Microservice (`src/ml/service.py`)**:
+   - FastAPI service on port `8000` serving `POST /score` and `GET /health`.
+   - Wraps the trained `model.pkl` Logistic Regression artifact from `score_dispute.py`.
+   - If unreachable, the orchestrator falls back to the JS heuristic scorer without crashing.
+
 4. **Analyst Web Dashboard (`src/public/`)**:
-   - Real-time priority queue dashboard with win probability badges, missing evidence checklists, and response draft generators.
+   - Priority queue with win probability badges, multi-agent audit timeline, and human-approval banners for high-value or low-confidence cases.
+
+## Assistive Governance Mode
+
+Cases are flagged with `requiresHumanApproval: true` when:
+- Transaction amount is **≥ ₹5,000**, or
+- ML win probability is **< 60%**
+
+This enforces human-in-the-loop oversight for high-stakes dispute decisions.

@@ -93,6 +93,9 @@ def synthetic_label(record: Dict[str, object], rng: random.Random) -> str:
     if record["customer_disputed_before_count"] >= 3:
         return "lost" if rng.random() < 0.70 else "won"
 
+    if record["is_first_time_customer"]:
+        return "lost" if rng.random() < 0.62 else "won"
+
     return "won" if rng.random() < 0.50 else "lost"
 
 

@@ -1,9 +1,11 @@
-.PHONY: help install start test test-js test-py generate-data train-ml eval-ml clean
+.PHONY: help install start start-ml start-all test test-js test-py generate-data train-ml eval-ml clean
 
 help:
 	@echo "Chargeback Sentinel - Enterprise Makefile Commands:"
 	@echo "  make install        Install Node.js & Python dependencies"
-	@echo "  make start          Start the Node.js API server & web dashboard"
+	@echo "  make start          Start the Node.js API server & web dashboard (:3000)"
+	@echo "  make start-ml       Start the Python ML microservice (:8000)"
+	@echo "  make start-all      Start both ML microservice (:8000) and API server (:3000)"
 	@echo "  make test           Run all JavaScript and Python test suites"
 	@echo "  make test-js        Run Node.js unit tests"
 	@echo "  make test-py        Run Python ML unit tests"
@@ -18,6 +20,13 @@ install:
 
 start:
 	npm start
+
+start-ml:
+	npm run start:ml
+
+start-all:
+	@echo "Starting ML microservice on :8000 and API server on :3000..."
+	@trap 'kill 0' INT TERM; npm run start:ml & npm start & wait
 
 test: test-js test-py
 

@@ -9,6 +9,7 @@ import {
   scoreDispute,
   verifyEvidence
 } from "../engine/engine.js";
+import { runCasePipeline } from "../engine/orchestrator.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,6 +76,17 @@ app.post("/draft-response", (req, res) => {
   res.json(draftResponse(dispute, verification));
 });
 
+app.post("/api/case/process", async (req, res) => {
+  try {
+    const mode = req.body.mode || "assistive";
+    const result = await runCasePipeline(req.body, { mode });
+    res.json(result);
+  } catch (error) {
+    console.error("Multi-Agent Orchestrator Error:", error);
+    res.status(500).json({ error: "Failed to run multi-agent case pipeline" });
+  }
+});
+
 app.get("/api/disputes/:id", (req, res) => {
   const dispute = normalizedDisputes.find((item) => item.id === req.params.id);
   if (!dispute) {
@@ -92,10 +104,12 @@ app.get("/api/disputes/:id", (req, res) => {
     scoring,
     draft,
     auditTrail: [
-      "Ingested merchant order and payment metadata",
-      "Validated evidence completeness by dispute type",
-      "Computed contest value against analyst cost",
-      "Generated analyst-ready defense narrative"
+      `Ingested dispute ${dispute.id} — ${dispute.disputeType}, ${dispute.amount} ${dispute.currency}`,
+      verification.missingItems.length === 0
+        ? "Evidence check: all required items present"
+        : `Evidence check: ${verification.missingItems.length} item(s) missing (${verification.missingItems.join(", ")})`,
+      `Contest scoring: ${Math.round(scoring.winProbability * 100)}% win probability, expected recovery ${scoring.expectedRecovery} ${dispute.currency}`,
+      `Decision: ${scoring.decision.replaceAll("_", " ")}`
     ]
   });
 });

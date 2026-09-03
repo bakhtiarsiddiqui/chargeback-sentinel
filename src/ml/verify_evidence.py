@@ -22,7 +22,8 @@ EVIDENCE_RULES: List[Rule] = [
 ]
 
 
-def verify_evidence(record: dict) -> dict:
+def verify_authentication_signals(record: dict) -> dict:
+    """Checks authentication/fraud signal completeness used as an ML input feature."""
     present_items: List[str] = []
     missing_items: List[str] = []
 
@@ -38,3 +39,6 @@ def verify_evidence(record: dict) -> dict:
         "missing_items": missing_items,
         "present_items": present_items,
     }
+
+
+verify_evidence = verify_authentication_signals

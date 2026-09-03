@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chargeback Sentinel - Enterprise AI Defense Engine</title>
+    <title>Chargeback Sentinel - Multi-Agent Orchestration Platform</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -13,15 +13,16 @@
           <p class="eyebrow">Enterprise Fraud & Dispute Engine</p>
           <h1>Chargeback Sentinel</h1>
           <p class="hero-copy">
-            Predict dispute win probabilities, verify evidence completeness, and automate merchant-ready response drafting with explainable margin optimization.
+            Multi-agent orchestration platform combining pre-transaction risk scoring, evidence verifiers, live scikit-learn ML win probability inference, and automated defense narratives.
           </p>
         </div>
         <div class="hero-card">
-          <p class="mini-label">MNC Platform Capabilities</p>
+          <p class="mini-label">Specialized Agent Swarm</p>
           <ul>
-            <li>Recover Merchant Margin</li>
-            <li>Reduce Analyst Review Time</li>
-            <li>Prevent Costly False-Positive Contests</li>
+            <li><strong>TransactionRiskAgent</strong> • Pre-Txn Risk Engine</li>
+            <li><strong>EvidenceVerificationAgent</strong> • Rule Verifier</li>
+            <li><strong>DisputeWinProbabilityAgent</strong> • ML Scorer</li>
+            <li><strong>ResponseNarrativeAgent</strong> • Defense Drafter</li>
           </ul>
         </div>
       </header>
@@ -44,29 +45,39 @@
         <div class="panel detail-panel">
           <div class="panel-header">
             <div>
-              <p class="mini-label">Analyst Review</p>
+              <p class="mini-label">Analyst Review & Multi-Agent Swarm</p>
               <h2 id="detail-title">Select a dispute</h2>
             </div>
-            <span id="decision-badge" class="decision-badge">Waiting</span>
+            <div class="action-header-group">
+              <button id="run-pipeline-btn" class="btn-primary">⚡ Run Multi-Agent Pipeline</button>
+              <span id="decision-badge" class="decision-badge">Waiting</span>
+            </div>
+          </div>
+
+          <div id="human-approval-banner" class="approval-banner hidden">
+            ⚠️ <strong>Assistive Governance Mode:</strong> High-value or low-confidence dispute flagged for human analyst approval.
           </div>
 
           <div id="detail-empty" class="empty-state">
-            Pick a dispute from the queue to inspect its risk, missing evidence, and response draft.
+            Pick a dispute from the queue to inspect its risk, missing evidence, live ML scoring, and response draft.
           </div>
 
           <div id="detail-content" class="detail-content hidden">
             <div class="detail-topline">
               <div class="score-card">
-                <p class="mini-label">Win Probability</p>
+                <p class="mini-label">Win Probability (ML Model)</p>
                 <strong id="win-probability">0%</strong>
+                <span id="ml-model-badge" class="sub-tag">scikit-learn ML</span>
               </div>
               <div class="score-card">
                 <p class="mini-label">Expected Recovery</p>
                 <strong id="expected-recovery">₹0</strong>
+                <span class="sub-tag">Margin-Optimized</span>
               </div>
               <div class="score-card">
                 <p class="mini-label">False-Positive Cost</p>
                 <strong id="contest-cost">₹0</strong>
+                <span class="sub-tag">Flat + Labor Cost</span>
               </div>
             </div>
 
@@ -89,9 +100,13 @@
               </div>
             </div>
 
+            <!-- Multi-Agent Orchestration Audit Trail -->
             <div class="audit-panel">
-              <h3>Audit Trail</h3>
-              <ul id="audit-trail" class="plain-list"></ul>
+              <div class="audit-panel-header">
+                <h3>🤖 Multi-Agent Orchestration Audit Trail</h3>
+                <span id="orchestrator-mode-tag" class="pill mode-tag">Mode: Assistive</span>
+              </div>
+              <div id="agent-timeline" class="agent-timeline"></div>
             </div>
           </div>
         </div>

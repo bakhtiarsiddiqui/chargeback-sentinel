@@ -14,9 +14,9 @@ class GenerateDataTests(unittest.TestCase):
 
     def test_total_record_count_and_split_sizes(self) -> None:
         self.assertEqual(len(self.all_records), 1200)
-        self.assertEqual(len(self.splits["train"]), 840)
+        self.assertEqual(len(self.splits["train"]), 839)
         self.assertEqual(len(self.splits["val"]), 180)
-        self.assertEqual(len(self.splits["test"]), 180)
+        self.assertEqual(len(self.splits["test"]), 181)
 
     def test_schema_fields_are_present(self) -> None:
         for record in self.all_records[:10]:

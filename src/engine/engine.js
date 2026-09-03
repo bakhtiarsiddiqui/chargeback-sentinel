@@ -62,6 +62,7 @@ export function normalizeDispute(rawDispute) {
   };
 }
 
+// Checks documentation completeness for the merchant's dispute defense
 export function verifyEvidence(dispute) {
   const normalized = normalizeDispute(dispute);
   const requiredItems = REQUIRED_EVIDENCE[normalized.disputeType] || REQUIRED_EVIDENCE.product_not_received;

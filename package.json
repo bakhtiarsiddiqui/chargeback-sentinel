@@ -20,7 +20,8 @@
   "license": "MIT",
   "scripts": {
     "start": "node src/server/server.js",
-    "test": "node --test tests/js/engine.test.js",
+    "start:ml": "PYTHONPATH=src/ml uvicorn src.ml.service:app --host 127.0.0.1 --port 8000",
+    "test": "node --test tests/js/engine.test.js tests/js/orchestrator.test.js",
     "test:python": "PYTHONPATH=. python3 -m unittest discover -s tests/python",
     "data:generate": "python3 src/ml/generate_data.py",
     "ml:train": "PYTHONPATH=src/ml python3 src/ml/score_dispute.py",

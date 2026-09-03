@@ -12,9 +12,9 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
 
 try:
-    from .verify_evidence import verify_evidence
+    from .verify_evidence import verify_evidence as verify_authentication_signals
 except ImportError:
-    from verify_evidence import verify_evidence
+    from verify_evidence import verify_evidence as verify_authentication_signals
 
 
 BOOL_FIELDS = [
@@ -68,7 +68,7 @@ def coerce_record(record: Dict[str, object]) -> Dict[str, object]:
 
 def record_to_features(record: Dict[str, object]) -> List[float]:
     coerced = coerce_record(record)
-    verification = verify_evidence(coerced)
+    verification = verify_authentication_signals(coerced)
 
     values = [float(coerced[field]) for field in NUMERIC_FIELDS]
     values.extend(1.0 if coerced[field] else 0.0 for field in BOOL_FIELDS)
