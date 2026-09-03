@@ -3,114 +3,495 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chargeback Sentinel - Multi-Agent Orchestration Platform</title>
+    <title>Chargeback Sentinel - Production Operations Dashboard</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="page-shell">
-      <header class="hero">
-        <div>
-          <p class="eyebrow">Enterprise Fraud & Dispute Engine</p>
-          <h1>Chargeback Sentinel</h1>
-          <p class="hero-copy">
-            Multi-agent orchestration platform combining pre-transaction risk scoring, evidence verifiers, live scikit-learn ML win probability inference, and automated defense narratives.
-          </p>
-        </div>
-        <div class="hero-card">
-          <p class="mini-label">Specialized Agent Swarm</p>
-          <ul>
-            <li><strong>TransactionRiskAgent</strong> • Pre-Txn Risk Engine</li>
-            <li><strong>EvidenceVerificationAgent</strong> • Rule Verifier</li>
-            <li><strong>DisputeWinProbabilityAgent</strong> • ML Scorer</li>
-            <li><strong>ResponseNarrativeAgent</strong> • Defense Drafter</li>
-          </ul>
-        </div>
-      </header>
-
-      <section class="metrics-grid" id="metrics-grid"></section>
-
-      <section id="app-status" class="status-banner hidden"></section>
-
-      <section class="content-grid">
-        <div class="panel">
-          <div class="panel-header">
-            <div>
-              <p class="mini-label">Dispute Queue</p>
-              <h2>Priority Cases</h2>
-            </div>
+    <div class="app-container">
+      <!-- Compact Operations Sidebar Navigation -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="brand-title">
+            <span>🛡️</span> Chargeback Sentinel
           </div>
-          <div id="queue" class="queue-list"></div>
+          <div class="brand-subtitle">Risk & Operations Platform</div>
         </div>
 
-        <div class="panel detail-panel">
-          <div class="panel-header">
-            <div>
-              <p class="mini-label">Analyst Review & Multi-Agent Swarm</p>
-              <h2 id="detail-title">Select a dispute</h2>
+        <nav class="sidebar-nav">
+          <a class="nav-link active" data-view="overview">
+            <span>📊</span> Overview
+          </a>
+          <a class="nav-link" data-view="cases">
+            <span>📁</span> Cases Explorer
+          </a>
+          <a class="nav-link" data-view="analytics">
+            <span>📈</span> Analytics
+          </a>
+          <a class="nav-link" data-view="risk">
+            <span>⚡</span> Chargeback Model Performance
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="system-health-widget">
+            <div class="health-status-row">
+              <span style="font-weight:600; color:#e2e8f0;">Node API (:3000)</span>
+              <span id="health-dot-node" class="health-dot"></span>
             </div>
-            <div class="action-header-group">
-              <button id="run-pipeline-btn" class="btn-primary">⚡ Run Multi-Agent Pipeline</button>
-              <span id="decision-badge" class="decision-badge">Waiting</span>
+            <div class="health-status-row">
+              <span style="font-weight:600; color:#e2e8f0;">ML Service (:8000)</span>
+              <span id="health-dot-ml" class="health-dot"></span>
             </div>
+            <div id="health-subtext" style="color:#94a3b8; font-size:0.7rem; margin-top:4px;">Checking status...</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Application Shell Wrapper -->
+      <div class="main-wrapper">
+        <header class="topbar">
+          <div class="topbar-left">
+            <h1 id="view-title" class="page-heading">Overview</h1>
+            <span class="demo-banner">
+              <span>⚠️</span> Demo Environment · Synthetic dispute data
+            </span>
           </div>
 
-          <div id="human-approval-banner" class="approval-banner hidden">
-            ⚠️ <strong>Assistive Governance Mode:</strong> High-value or low-confidence dispute flagged for human analyst approval.
+          <div class="topbar-right">
+            <div class="timeframe-picker" id="timeframe-picker">
+              <button class="timeframe-btn" data-range="today">Today</button>
+              <button class="timeframe-btn" data-range="24h">24H</button>
+              <button class="timeframe-btn" data-range="7d">7D</button>
+              <button class="timeframe-btn active" data-range="30d">30D</button>
+              <button class="timeframe-btn" data-range="all">All Time</button>
+            </div>
+            <button id="refresh-btn" class="btn-secondary">
+              <span>🔄</span> Refresh
+            </button>
           </div>
+        </header>
 
-          <div id="detail-empty" class="empty-state">
-            Pick a dispute from the queue to inspect its risk, missing evidence, live ML scoring, and response draft.
-          </div>
+        <main class="workspace">
+          <!-- VIEW 1: OVERVIEW -->
+          <section id="view-overview" class="view-panel active">
+            <!-- Executive KPI Row -->
+            <div class="kpi-grid" id="overview-kpis"></div>
 
-          <div id="detail-content" class="detail-content hidden">
-            <div class="detail-topline">
-              <div class="score-card">
-                <p class="mini-label">Win Probability (ML Model)</p>
-                <strong id="win-probability">0%</strong>
-                <span id="ml-model-badge" class="sub-tag">scikit-learn ML</span>
+            <!-- Financial Impact Panel & Case Volume Trend -->
+            <div class="dashboard-grid-2">
+              <div class="card-panel">
+                <div class="panel-title">
+                  <span>Financial Impact Summary</span>
+                  <span style="font-size:0.75rem; color:var(--text-subtle); font-weight:normal;">Calculated from demo dataset</span>
+                </div>
+                <div class="financial-stats-grid" id="overview-financial-grid"></div>
               </div>
-              <div class="score-card">
-                <p class="mini-label">Expected Recovery</p>
-                <strong id="expected-recovery">₹0</strong>
-                <span class="sub-tag">Margin-Optimized</span>
-              </div>
-              <div class="score-card">
-                <p class="mini-label">False-Positive Cost</p>
-                <strong id="contest-cost">₹0</strong>
-                <span class="sub-tag">Flat + Labor Cost</span>
+
+              <div class="card-panel">
+                <div class="panel-title">Case Volume Trend</div>
+                <div class="chart-container" id="volume-chart-container">
+                  <svg class="chart-svg" viewBox="0 0 400 160" preserveAspectRatio="none">
+                    <path d="M0,130 Q80,90 160,110 T320,50 T400,30" fill="none" stroke="#2563eb" stroke-width="3" />
+                    <path d="M0,130 Q80,90 160,110 T320,50 T400,30 L400,160 L0,160 Z" fill="rgba(37,99,235,0.08)" />
+                  </svg>
+                </div>
               </div>
             </div>
 
-            <div class="detail-columns">
+            <!-- Needs Attention & Chargeback Patterns -->
+            <div class="dashboard-grid-2">
+              <div class="card-panel">
+                <div class="panel-title">Needs Attention (Operational Callouts)</div>
+                <div class="attention-grid" id="attention-grid"></div>
+              </div>
+
+              <div class="card-panel">
+                <div class="panel-title">Chargeback Patterns (By Dispute Type)</div>
+                <div id="patterns-breakdown" style="display:flex; flex-direction:column; gap:12px;"></div>
+              </div>
+            </div>
+
+            <!-- Recent Priority Disputes Queue -->
+            <div class="card-panel" style="margin-top:20px;">
+              <div class="panel-title">
+                <span>Recent Priority Disputes</span>
+                <button class="btn-secondary" style="font-size:0.78rem;" id="goto-cases-btn">View All Cases →</button>
+              </div>
+              <div class="table-wrapper">
+                <table class="fintech-table">
+                  <thead>
+                    <tr>
+                      <th>Case ID</th>
+                      <th>Merchant</th>
+                      <th>Type</th>
+                      <th>Amount</th>
+                      <th>Decision</th>
+                      <th>Win Prob</th>
+                      <th>Priority</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="overview-recent-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- VIEW 2: CASES EXPLORER -->
+          <section id="view-cases" class="view-panel">
+            <div class="explorer-controls">
+              <div class="search-and-categories">
+                <div class="search-box">
+                  <span class="search-icon">🔍</span>
+                  <input type="text" id="cases-search" class="search-input" placeholder="Search by Case ID, Merchant, Customer..." />
+                </div>
+                <div class="category-pills" id="category-pills">
+                  <button class="pill-btn active" data-cat="all">All Types</button>
+                  <button class="pill-btn" data-cat="product_not_received">Product Not Received</button>
+                  <button class="pill-btn" data-cat="fraudulent_transaction">Fraudulent Transaction</button>
+                  <button class="pill-btn" data-cat="digital_service">Digital Service</button>
+                </div>
+              </div>
+
+              <div class="multi-filter-row">
+                <select id="filter-status" class="filter-select">
+                  <option value="all">Status: All</option>
+                  <option value="ready_to_submit">Ready to Submit</option>
+                  <option value="needs_more_evidence">Needs Review</option>
+                  <option value="do_not_contest">Do Not Contest</option>
+                </select>
+
+                <select id="filter-priority" class="filter-select">
+                  <option value="all">Priority: All</option>
+                  <option value="high">High Priority</option>
+                  <option value="medium">Medium Priority</option>
+                  <option value="low">Low Priority</option>
+                </select>
+
+                <select id="filter-outcome" class="filter-select">
+                  <option value="all">Historical Outcome: All</option>
+                  <option value="won">Won</option>
+                  <option value="lost">Lost</option>
+                  <option value="not_contested">Not Contested</option>
+                </select>
+
+                <button id="export-csv-btn" class="btn-secondary" style="margin-left:auto;">
+                  <span>📥</span> Export CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="fintech-table">
+                <thead>
+                  <tr>
+                    <th>Case ID</th>
+                    <th>Merchant</th>
+                    <th>Customer</th>
+                    <th>Dispute Type</th>
+                    <th>Amount</th>
+                    <th>Recommendation</th>
+                    <th>Win Prob</th>
+                    <th>Completeness</th>
+                    <th>Priority</th>
+                    <th>Dispute Date</th>
+                  </tr>
+                </thead>
+                <tbody id="cases-tbody"></tbody>
+              </table>
+            </div>
+            <div id="cases-empty" class="empty-state" style="display:none;">
+              <h3>No matching cases found</h3>
+              <p>Try adjusting your search query or filters.</p>
+            </div>
+          </section>
+
+          <!-- VIEW 3: FULL CASE INVESTIGATION -->
+          <section id="view-investigation" class="view-panel">
+            <div id="investigation-empty" class="empty-state">
+              <h3>No dispute selected</h3>
+              <p>Select a case from the Cases Explorer to inspect transaction signals, evidence, and recommendations.</p>
+            </div>
+
+            <div id="investigation-content" style="display:none;">
+              <div class="investigation-header">
+                <div>
+                  <div style="font-size:0.8rem; color:var(--text-subtle); text-transform:uppercase; font-weight:700;" id="inv-merchant-header">Merchant</div>
+                  <h2 style="font-size:1.5rem; font-weight:700; margin:2px 0;" id="inv-case-id">CB-XXXX</h2>
+                  <div style="font-size:0.85rem; color:var(--text-muted);" id="inv-sub-header">Dispute Type • Customer</div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <button id="run-pipeline-btn" class="btn-primary" style="font-size:0.9rem; padding:10px 18px;">
+                    ⚡ Run Multi-Agent Pipeline
+                  </button>
+                  <span id="inv-status-badge" class="status-badge">Recommendation</span>
+                </div>
+              </div>
+
+              <!-- Governance Warning Banner -->
+              <div id="inv-governance-banner" class="governance-banner" style="display:none;">
+                <span>⚠️</span>
+                <div>
+                  <strong>Assistive Governance Mode:</strong> High-value dispute (≥ ₹5,000) or low ML confidence requires human analyst review before submission.
+                </div>
+              </div>
+
+              <!-- Topline Financial & Model Metrics Cards -->
+              <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:20px;">
+                <div class="kpi-card">
+                  <div class="kpi-title">Dispute Amount</div>
+                  <div class="kpi-value" id="inv-amount">₹0</div>
+                  <div class="kpi-subtext" id="inv-currency">INR</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-title">Model Win Probability</div>
+                  <div class="kpi-value" id="inv-win-prob">0%</div>
+                  <div class="kpi-subtext" id="inv-model-badge">scikit-learn ML</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-title">Model-Estimated Recovery</div>
+                  <div class="kpi-value" id="inv-est-recovery">₹0</div>
+                  <div class="kpi-subtext">Margin-aware calculation</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-title">Contest Cost</div>
+                  <div class="kpi-value" id="inv-contest-cost">₹0</div>
+                  <div class="kpi-subtext">Flat + Analyst review time</div>
+                </div>
+              </div>
+
+              <!-- Analyst Action Bar (Session Local) -->
+              <div class="action-bar">
+                <button class="btn-action" data-action="approve">✓ Approve for Contest</button>
+                <button class="btn-action" data-action="escalate">⚠️ Escalate to Lead</button>
+                <button class="btn-action" data-action="dnc">✕ Do Not Contest</button>
+                <span class="session-badge" id="analyst-session-status">Session State: Pending Review</span>
+                <span style="font-size:0.75rem; color:var(--text-subtle); margin-left:auto;">Analyst decisions apply to current session</span>
+              </div>
+
+              <div class="investigation-grid">
+                <div>
+                  <!-- Section: Transaction & Evidence Signals (Fact Verification, NOT SHAP weights) -->
+                  <div class="card-panel signals-section">
+                    <div class="panel-title">
+                      <span>Transaction & Evidence Signals</span>
+                      <span style="font-size:0.75rem; color:var(--text-subtle); font-weight:normal;">Factual Verification Checks</span>
+                    </div>
+
+                    <div class="signal-group-title">1. Transaction Verification</div>
+                    <div class="signal-chips-grid" id="signals-txn-grid"></div>
+
+                    <div class="signal-group-title">2. Customer Profile & History</div>
+                    <div class="signal-chips-grid" id="signals-customer-grid"></div>
+
+                    <div class="signal-group-title">3. Fulfillment & Evidence Integrity</div>
+                    <div class="signal-chips-grid" id="signals-fulfillment-grid"></div>
+                  </div>
+
+                  <!-- Engine Reason Codes -->
+                  <div class="card-panel" style="margin-bottom:20px;">
+                    <div class="panel-title">Engine Decision Reason Codes</div>
+                    <ul id="inv-reason-codes" style="padding-left:18px; line-height:1.6; color:var(--text-muted);"></ul>
+                  </div>
+
+                  <!-- Defense Narrative Draft Preview -->
+                  <div class="card-panel">
+                    <div class="panel-title">Merchant Defense Narrative Draft</div>
+                    <div id="inv-draft-text" style="background:var(--bg-card-subtle); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-color); font-family:monospace; font-size:0.85rem; line-height:1.6; white-space:pre-wrap; margin-bottom:12px;"></div>
+                    
+                    <div style="font-weight:700; font-size:0.82rem; margin-bottom:6px;">Evidence Citations:</div>
+                    <ul id="inv-citations" style="padding-left:18px; font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;"></ul>
+
+                    <div style="font-weight:700; font-size:0.82rem; margin-bottom:6px;">Submission Checklist:</div>
+                    <ul id="inv-checklist" style="padding-left:18px; font-size:0.82rem; color:var(--text-muted);"></ul>
+                  </div>
+                </div>
+
+                <div>
+                  <!-- Evidence Completeness Card -->
+                  <div class="card-panel" style="margin-bottom:20px;">
+                    <div class="panel-title">Evidence Packet</div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                      <span style="font-weight:600;">Completeness Score</span>
+                      <strong style="font-size:1.2rem;" id="inv-evidence-score">0%</strong>
+                    </div>
+
+                    <div style="font-weight:700; font-size:0.8rem; margin-bottom:4px; color:var(--text-subtle);">Missing Required Evidence:</div>
+                    <ul id="inv-missing-evidence" style="padding-left:18px; font-size:0.82rem; color:var(--status-danger); margin-bottom:12px;"></ul>
+
+                    <div style="font-weight:700; font-size:0.8rem; margin-bottom:4px; color:var(--text-subtle);">Detected Risk Flags:</div>
+                    <ul id="inv-risk-flags" style="padding-left:18px; font-size:0.82rem; color:#b45309;"></ul>
+                  </div>
+
+                  <!-- Multi-Agent Audit Trail -->
+                  <div class="card-panel">
+                    <div class="panel-title">
+                      <span>🤖 Agent Audit Timeline</span>
+                      <span style="font-size:0.72rem; color:var(--text-subtle);">Execution Log</span>
+                    </div>
+                    <div class="audit-timeline" id="inv-audit-timeline"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- VIEW 4: ANALYTICS -->
+          <section id="view-analytics" class="view-panel">
+            <div style="margin-bottom:16px; font-size:0.82rem; color:var(--text-subtle);">
+              ℹ️ Analytics are computed dynamically from the currently loaded demo dispute dataset.
+            </div>
+
+            <div class="kpi-grid" id="analytics-kpis"></div>
+
+            <div class="dashboard-grid-2">
+              <div class="card-panel">
+                <div class="panel-title">Outcome Distribution</div>
+                <div id="analytics-outcome-breakdown" style="display:flex; flex-direction:column; gap:12px;"></div>
+              </div>
+
+              <div class="card-panel">
+                <div class="panel-title">Evidence Quality Summary</div>
+                <div id="analytics-evidence-summary" style="display:flex; flex-direction:column; gap:12px;"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- VIEW 5: CHARGEBACK MODEL PERFORMANCE -->
+          <section id="view-risk" class="view-panel">
+            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:20px 24px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
               <div>
-                <h3>Reason Codes</h3>
-                <ul id="reason-codes" class="tag-list"></ul>
-                <h3>Missing Evidence</h3>
-                <ul id="missing-items" class="plain-list"></ul>
-                <h3>Risk Flags</h3>
-                <ul id="risk-flags" class="plain-list"></ul>
+                <h2 style="font-size:1.35rem; font-weight:700; margin-bottom:4px;">Chargeback Model Performance</h2>
+                <div style="font-size:0.85rem; color:var(--text-muted);">
+                  Evaluate how accurately Chargeback Sentinel predicts dispute outcomes and identifies recoverable chargebacks.
+                </div>
               </div>
-              <div>
-                <h3>Draft Response</h3>
-                <div id="draft-text" class="draft-box"></div>
-                <h3>Citations</h3>
-                <ul id="citations" class="plain-list"></ul>
-                <h3>Submission Checklist</h3>
-                <ul id="submission-checklist" class="plain-list"></ul>
+              <span class="demo-banner">
+                <span>⚠️</span> Demo Environment · Synthetic chargeback data
+              </span>
+            </div>
+
+            <div style="margin-bottom:16px; font-size:0.8rem; color:var(--text-subtle);">
+              ℹ️ Model evaluation metrics are calculated from the current ML evaluation dataset (<code>data/ml/test.csv</code>).
+            </div>
+
+            <!-- 2. MODEL PERFORMANCE SUMMARY -->
+            <div class="kpi-grid" id="risk-kpis" style="grid-template-columns: repeat(4, 1fr); margin-bottom:20px;"></div>
+
+            <!-- 3 & 4. CONFUSION MATRIX + PERFORMANCE BY OUTCOME -->
+            <div class="dashboard-grid-2" style="margin-bottom:20px;">
+              <div class="card-panel">
+                <div class="panel-title">
+                  <span>Chargeback Outcome Classification</span>
+                  <span style="font-size:0.75rem; color:var(--text-subtle); font-weight:normal;">Rows = Actual outcome | Columns = Model prediction</span>
+                </div>
+                <div id="risk-confusion-matrix"></div>
+              </div>
+
+              <div class="card-panel">
+                <div class="panel-title">Performance by Chargeback Outcome</div>
+                <div id="risk-per-class-table"></div>
               </div>
             </div>
 
-            <!-- Multi-Agent Orchestration Audit Trail -->
-            <div class="audit-panel">
-              <div class="audit-panel-header">
-                <h3>🤖 Multi-Agent Orchestration Audit Trail</h3>
-                <span id="orchestrator-mode-tag" class="pill mode-tag">Mode: Assistive</span>
+            <!-- 5. CHARGEBACK PREDICTION ERRORS -->
+            <div class="card-panel" style="margin-bottom:20px;">
+              <div class="panel-title">
+                <span>Chargeback Prediction Errors</span>
+                <span style="font-size:0.75rem; color:var(--text-subtle); font-weight:normal;" id="risk-error-summary">Evaluation Split Misclassifications</span>
               </div>
-              <div id="agent-timeline" class="agent-timeline"></div>
+              <div id="risk-prediction-errors"></div>
+            </div>
+
+            <!-- 6 & 7 & 8. WIN PROBABILITY, CALIBRATION, ROC/PR -->
+            <div class="dashboard-grid-2" style="margin-bottom:20px;">
+              <div class="card-panel">
+                <div class="panel-title">
+                  <span>Chargeback Win Probability Distribution</span>
+                  <span style="font-size:0.72rem; color:var(--text-subtle); font-weight:normal;">P(class = 'won')</span>
+                </div>
+                <div id="risk-score-bands" style="display:flex; flex-direction:column; gap:12px;"></div>
+              </div>
+
+              <div class="card-panel">
+                <div class="panel-title">Calibration & ROC / PR Curves</div>
+                <div id="risk-calibration-roc" style="display:flex; flex-direction:column; gap:12px;"></div>
+              </div>
+            </div>
+
+            <!-- 9 & 10. RECOVERY IMPACT & GOVERNANCE -->
+            <div class="dashboard-grid-2" style="margin-bottom:20px;">
+              <div class="card-panel">
+                <div class="panel-title">Model Recovery Impact (Business Dataset)</div>
+                <div id="risk-recovery-impact" style="display:flex; flex-direction:column; gap:12px;"></div>
+              </div>
+
+              <div class="card-panel">
+                <div class="panel-title">
+                  <span>Chargeback Governance</span>
+                  <span style="font-size:0.72rem; color:var(--text-subtle); font-weight:normal;">Amount ≥ ₹5,000 OR Win Prob &lt; 60%</span>
+                </div>
+                <div id="risk-governance" style="display:flex; flex-direction:column; gap:12px;"></div>
+              </div>
+            </div>
+
+            <!-- 11 & 12 & 13. METHODOLOGY, DECISION SIGNALS, RUNTIME STATUS -->
+            <div class="dashboard-grid-2" style="margin-bottom:20px;">
+              <div class="card-panel">
+                <div class="panel-title">Chargeback Decision Signals</div>
+                <div id="risk-decision-signals" style="display:flex; flex-direction:column; gap:10px;"></div>
+              </div>
+
+              <div class="card-panel">
+                <div class="panel-title">Model Evaluation Methodology & Runtime</div>
+                <div id="risk-methodology" style="display:flex; flex-direction:column; gap:10px;"></div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <!-- Quick Right-Side Sliding Drawer for Case Preview -->
+    <div class="drawer-overlay" id="quick-drawer">
+      <div class="drawer-panel">
+        <div class="drawer-header">
+          <div>
+            <div style="font-size:0.75rem; color:var(--text-subtle); font-weight:700;" id="drawer-merchant">Merchant</div>
+            <h3 style="font-size:1.2rem; font-weight:700; margin:2px 0;" id="drawer-case-id">CB-XXXX</h3>
+          </div>
+          <button id="drawer-close-btn" class="btn-secondary" style="padding:4px 8px;">✕</button>
+        </div>
+
+        <div class="drawer-body">
+          <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-subtle);">Dispute Amount</div>
+              <strong style="font-size:1.3rem;" id="drawer-amount">₹0</strong>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-subtle);">Recommendation</div>
+              <span id="drawer-status-badge" class="status-badge">Status</span>
             </div>
           </div>
+
+          <div class="signal-group-title">Key Transaction Signals</div>
+          <div class="signal-chips-grid" style="grid-template-columns:1fr 1fr; margin-bottom:16px;" id="drawer-signals"></div>
+
+          <div style="font-weight:700; font-size:0.82rem; margin-bottom:6px;">Recommendation Reason Codes:</div>
+          <ul id="drawer-reason-codes" style="padding-left:18px; font-size:0.82rem; color:var(--text-muted); margin-bottom:16px;"></ul>
+
+          <div style="font-weight:700; font-size:0.82rem; margin-bottom:6px;">Evidence Completeness:</div>
+          <div style="font-size:1.1rem; font-weight:700;" id="drawer-evidence-score">0%</div>
         </div>
-      </section>
+
+        <div class="drawer-footer">
+          <button id="drawer-open-full-btn" class="btn-primary" style="width:100%;">
+            Open Full Case Investigation →
+          </button>
+        </div>
+      </div>
     </div>
 
     <script src="/app.js" type="module"></script>

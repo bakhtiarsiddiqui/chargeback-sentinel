@@ -1,10 +1,16 @@
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+# Ensure project root is in sys.path for direct execution
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import joblib
-from starlette.testclient import TestClient
+from fastapi.testclient import TestClient
 
 from src.ml.generate_data import generate_dataset, write_csv
 from src.ml.score_dispute import train_model
@@ -73,3 +79,7 @@ class ServiceTests(unittest.TestCase):
         self.assertLessEqual(payload["winProbability"], 1.0)
         self.assertIn("modelType", payload)
         self.assertIn("dataNotice", payload)
+
+
+if __name__ == "__main__":
+    unittest.main()

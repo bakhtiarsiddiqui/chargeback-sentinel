@@ -14,6 +14,8 @@ import { runCasePipeline } from "../engine/orchestrator.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://127.0.0.1:8000";
+
 const app = express();
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || "127.0.0.1";
@@ -34,7 +36,21 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.get("/api/disputes", (_req, res) => {
+app.get("/api/ml-health", async (_req, res) => {
+  try {
+    const mlRes = await fetch(`${ML_SERVICE_URL}/health`);
+    if (!mlRes.ok) {
+      res.json({ status: "offline", modelLoaded: false });
+      return;
+    }
+    const data = await mlRes.json();
+    res.json(data);
+  } catch {
+    res.json({ status: "offline", modelLoaded: false });
+  }
+});
+
+app.get("/api/disputes", (req, res) => {
   const queue = queueDisputes.map((dispute) => {
     const scoring = scoreDispute(dispute);
     return {
@@ -42,6 +58,19 @@ app.get("/api/disputes", (_req, res) => {
       scoring
     };
   });
+
+  if (req.query?.all === "true") {
+    const disputesList = normalizedDisputes.map((dispute) => {
+      const scoring = scoreDispute(dispute);
+      return {
+        ...dispute,
+        scoring
+      };
+    });
+    res.json({ queue, disputes: disputesList });
+    return;
+  }
+
   res.json({ queue });
 });
 
@@ -128,6 +157,44 @@ app.get("/api/disputes/:id", (req, res) => {
       `Decision: ${scoring.decision.replaceAll("_", " ")}`
     ]
   });
+});
+
+/**
+ * GET /api/model/evaluation
+ * Versioned ML evaluation endpoint (schema 1.0).
+ * Proxies to the Python ML microservice. Returns a clean unavailable
+ * response if the ML service is offline — the rest of the app keeps working.
+ *
+ * Backward-compatibility note:
+ *   - This is a NEW additive endpoint. GET /api/metrics is unchanged.
+ *   - Existing consumers of /api/metrics must not be modified.
+ */
+app.get("/api/model/evaluation", async (_req, res) => {
+  try {
+    const mlRes = await fetch(`${ML_SERVICE_URL}/api/model/evaluation`);
+    if (!mlRes.ok) {
+      const errorText = await mlRes.text().catch(() => "Unknown error");
+      res.status(mlRes.status).json({
+        schemaVersion: "1.0",
+        evaluation: {
+          status: "error",
+          reason: `ML service returned HTTP ${mlRes.status}: ${errorText}`
+        }
+      });
+      return;
+    }
+    const data = await mlRes.json();
+    res.json(data);
+  } catch (err) {
+    // ML service offline — return well-formed unavailable response
+    res.status(200).json({
+      schemaVersion: "1.0",
+      evaluation: {
+        status: "unavailable",
+        reason: "ML microservice is not reachable. Start it with `npm run start:ml`."
+      }
+    });
+  }
 });
 
 const server = app.listen(port, host, () => {

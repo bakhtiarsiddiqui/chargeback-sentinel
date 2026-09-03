@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import disputes from "../../data/disputes.json" with { type: "json" };
 import { assessTransactionRisk } from "../../src/engine/transactionRiskAgent.js";
 import { toMlFeatures } from "../../src/engine/mlAdapter.js";
-import { runCasePipeline, normalizeDispute } from "../../src/engine/orchestrator.js";
+import { runCasePipeline } from "../../src/engine/orchestrator.js";
 
 test("TransactionRiskAgent assesses pre-transaction risk flags correctly", () => {
   const highRiskTxn = {

@@ -9,11 +9,13 @@ for real-time win probability inference (DisputeWinProbabilityAgent).
 from __future__ import annotations
 
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict
 
 import joblib
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 # Ensure src/ml directory is in sys.path for imports
@@ -22,12 +24,7 @@ if str(ml_dir) not in sys.path:
     sys.path.insert(0, str(ml_dir))
 
 from features import record_to_features
-
-app = FastAPI(
-    title="Chargeback Sentinel - ML Agent API",
-    description="Microservice providing real-time win probability inference for dispute risk scoring.",
-    version="1.0.0",
-)
+from evaluation_schema import EvaluationValidationError, build_evaluation
 
 MODEL_PATH = Path("model.pkl")
 
@@ -35,13 +32,36 @@ MODEL_PATH = Path("model.pkl")
 _bundle: Dict[str, Any] = {}
 
 
-@app.on_event("startup")
 def load_model() -> None:
     global _bundle
     if not MODEL_PATH.exists():
         _bundle = {}
         return
     _bundle = joblib.load(MODEL_PATH)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    load_model()
+    yield
+
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI(
+    title="Chargeback Sentinel - ML Agent API",
+    description="Microservice providing real-time win probability inference for dispute risk scoring.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class DisputeFeatures(BaseModel):
@@ -100,6 +120,44 @@ def score(features: DisputeFeatures) -> Dict[str, Any]:
         "modelType": "LogisticRegression (scikit-learn)",
         "dataNotice": _bundle.get("synthetic_data_notice", "Trained on synthetic data."),
     }
+
+
+@app.get("/api/model/evaluation")
+def get_model_evaluation() -> JSONResponse:
+    """
+    Return the versioned ML evaluation payload (schema 1.0).
+
+    Schema versioning policy (MAJOR.MINOR):
+      MAJOR bump — breaking: field removal, rename, type change, semantic change.
+      MINOR bump — additive: new optional fields/sections; 1.0 consumers ignore them.
+
+    Required sections: status, dataset, model, summary, perClassMetrics,
+                       confusionMatrix, errorAnalysis, governance.
+    Optional sections carry an explicit `available: true/false` flag.
+    """
+    try:
+        payload = build_evaluation()
+        return JSONResponse(content=payload)
+    except EvaluationValidationError as exc:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "schemaVersion": "1.0",
+                "error": "evaluation_validation_failed",
+                "detail": str(exc),
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        return JSONResponse(
+            status_code=500,
+            content={
+                "schemaVersion": "1.0",
+                "evaluation": {
+                    "status": "error",
+                    "reason": f"Internal evaluation error: {type(exc).__name__}: {exc}",
+                },
+            },
+        )
 
 
 if __name__ == "__main__":
