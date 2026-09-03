@@ -23,22 +23,12 @@ test("TransactionRiskAgent assesses pre-transaction risk flags correctly", () =>
 
 test("mlAdapter transforms dispute record into valid snake_case ML feature payload", () => {
   const sampleDispute = disputes[0];
-  console.log("sampleDispute raw:", JSON.stringify(sampleDispute, null, 2));
-  const normalizedDispute = normalizeDispute({ ...sampleDispute, _evidenceCompletenessScore: 0.95 });
-  console.log("normalizedDispute:", JSON.stringify(normalizedDispute, null, 2));
-  const features = toMlFeatures(normalizedDispute);
-  console.log("features from mlAdapter:", JSON.stringify(features, null, 2));
+  const enhancedDispute = { ...sampleDispute, _evidenceCompletenessScore: 0.95 };
+  const features = toMlFeatures(enhancedDispute);
 
-  console.log("Checking txn_amount: ", features.txn_amount, " === ", sampleDispute.amount);
   assert.equal(features.txn_amount, sampleDispute.amount);
-  
-  console.log("Checking device_id_match: ", features.device_id_match, " === ", Boolean(sampleDispute.deviceFingerprintMatch));
   assert.equal(features.device_id_match, Boolean(sampleDispute.deviceFingerprintMatch));
-  
-  console.log("Checking three_ds_authenticated: ", features.three_ds_authenticated, " === ", Boolean(sampleDispute.threeDsAuthenticated));
   assert.equal(features.three_ds_authenticated, Boolean(sampleDispute.threeDsAuthenticated));
-  
-  console.log("Checking completeness_score: ", features.completeness_score, " === 0.95");
   assert.equal(features.completeness_score, 0.95);
 });
 
